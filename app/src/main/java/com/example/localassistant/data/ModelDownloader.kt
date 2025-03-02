@@ -12,7 +12,7 @@ object ModelDownloader {
     private val loggingInterceptor = HttpLoggingInterceptor { message ->
         android.util.Log.d("OkHttp", message)
     }.apply {
-        level = HttpLoggingInterceptor.Level.BODY
+        level = HttpLoggingInterceptor.Level.BASIC
     }
 
     private val client: OkHttpClient = OkHttpClient.Builder()

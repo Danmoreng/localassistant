@@ -13,7 +13,7 @@ exifinterface = "1.4.0"
 viewmodelCompose = "2.8.7"
 okhttp = "4.11.0"
 okhttpLogging = "4.11.0"
-onnxruntimeAndroid = "1.19.0"
+onnxruntimeAndroid = "1.20.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
