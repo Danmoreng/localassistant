@@ -3,28 +3,38 @@ package com.example.localassistant
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.localassistant.ui.screens.ChatScreen
+import com.example.localassistant.ui.screens.DownloadScreen
 import com.example.localassistant.ui.theme.LocalAssistantTheme
 import com.example.localassistant.viewmodel.ChatViewModel
-import androidx.lifecycle.viewmodel.compose.viewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             LocalAssistantTheme {
-                // Obtain the ViewModel
+                // Obtain the ChatViewModel (which now also manages model download state)
                 val chatViewModel: ChatViewModel = viewModel()
+                val isModelAvailable by chatViewModel.isModelAvailable
 
-                // Pass state and event callbacks to ChatScreen
-                ChatScreen(
-                    messages = chatViewModel.messages,
-                    onMessageSent = { message ->
-                        chatViewModel.sendMessage(message)
-                    }
-                )
+                if (!isModelAvailable) {
+                    // Show the download screen until the model is available
+                    DownloadScreen(
+                        isDownloading = chatViewModel.isDownloading.value,
+                        downloadError = chatViewModel.downloadError.value,
+                        onDownloadClicked = { chatViewModel.downloadModel() }
+                    )
+                } else {
+                    // When the model is available, display the chat screen
+                    ChatScreen(
+                        messages = chatViewModel.messages,
+                        onMessageSent = { message ->
+                            chatViewModel.sendMessage(message)
+                        }
+                    )
+                }
             }
         }
     }
