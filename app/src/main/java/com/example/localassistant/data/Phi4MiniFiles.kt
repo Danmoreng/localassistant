@@ -9,10 +9,10 @@ object Phi4MiniFiles {
     // List all files you need
     val REQUIRED_FILES = listOf(
         "config.json",
-        "configuration_phi.json",
         "genai_config.json",
         "merges.txt",
         "model.onnx",
+        "model.onnx.data",
         "special_tokens_map.json",
         "tokenizer.json",
         "tokenizer_config.json",

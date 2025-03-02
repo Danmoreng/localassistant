@@ -62,4 +62,5 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.onnxruntime.android)
     implementation(libs.okhttp.logging.interceptor)
+    implementation(files("libs/onnxruntime-genai-android-0.6.0.aar"))
 }

@@ -1,18 +1,20 @@
 package com.example.localassistant.viewmodel
 
 import android.app.Application
-import androidx.compose.runtime.mutableStateListOf
 import android.util.Log
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.localassistant.data.Phi4ModelRepository
+import com.example.localassistant.inference.Phi4OnnxInference
 import com.example.localassistant.model.Message
 import com.example.localassistant.model.MessageType
 import com.example.localassistant.model.TextMessage
-import com.example.localassistant.data.Phi4ModelRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -38,6 +40,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     // 3) Model repository
     // -----------------------------
     private val modelRepository = Phi4ModelRepository(application)
+    private var onnxInference: Phi4OnnxInference? = null
 
     init {
         // Add a welcome message
@@ -50,7 +53,31 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
         // Check if model files already exist
         _isModelAvailable.value = modelRepository.isModelAvailable()
+
+        // If model files are already there, initialize the inference session
+        if (_isModelAvailable.value) {
+            initOnnxInference()
+        }
     }
+
+    private fun initOnnxInference() {
+        try {
+            // Get the absolute path where the model files were stored
+            val modelDirPath = modelRepository.getModelDirPath()
+            // or modelRepository.modelDirectory.absolutePath, depending on your code
+
+            onnxInference = Phi4OnnxInference(
+                context = getApplication(), // or requireContext() if inside Fragment
+                modelDirPath = modelDirPath
+            )
+
+            Log.d("ChatViewModel", "ONNX Inference initialized.")
+
+        } catch (e: Exception) {
+            Log.e("ChatViewModel", "Failed to init Onnx Inference", e)
+        }
+    }
+
 
     /**
      * Called when the user wants to initiate a download of the model files.
@@ -61,18 +88,19 @@ fun downloadModel() {
         _isDownloading.value = true
         _downloadError.value = null
 
-        try {
-            modelRepository.downloadModelFiles()
-            _isModelAvailable.value = true
-            Log.d("ChatViewModel", "Download completed successfully")
-        } catch (e: Exception) {
-            Log.e("ChatViewModel", "Download failed: ${e.message}")
-            _downloadError.value = e.message
-        } finally {
-            _isDownloading.value = false
+            try {
+                modelRepository.downloadModelFiles()
+                _isModelAvailable.value = true
+                // Once downloaded, initialize the inference
+                initOnnxInference()
+            } catch (e: Exception) {
+                _downloadError.value = e.message
+                Log.e("ChatViewModel", "Download failed", e)
+            } finally {
+                _isDownloading.value = false
+            }
         }
     }
-}
 
 
     // -----------------------------
@@ -97,12 +125,12 @@ fun downloadModel() {
 
     private fun generateAssistantResponse(userText: String) {
         viewModelScope.launch {
-            delay(500L)
-            val responseText = "I received your message: \"$userText\""
-            val assistantMessage = TextMessage(
-                text = responseText,
-                type = MessageType.ASSISTANT
-            )
+            // Move heavy inference off main thread
+            val responseText = withContext(Dispatchers.IO) {
+                onnxInference?.generateText(userText)
+                    ?: "Model not initialized yet."
+            }
+            val assistantMessage = TextMessage(responseText, MessageType.ASSISTANT)
             _messages.add(0, assistantMessage)
         }
     }
