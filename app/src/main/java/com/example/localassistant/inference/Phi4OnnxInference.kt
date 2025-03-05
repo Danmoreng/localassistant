@@ -5,7 +5,6 @@ import android.util.Log
 import ai.onnxruntime.genai.GenAIException
 import ai.onnxruntime.genai.Model
 import ai.onnxruntime.genai.Tokenizer
-import ai.onnxruntime.genai.Sequences
 import ai.onnxruntime.genai.GeneratorParams
 import ai.onnxruntime.genai.Generator
 
@@ -32,51 +31,37 @@ class Phi4OnnxInference(
     }
 
     /**
-     * Runs a single-shot generation:
-     * - Encode prompt -> token IDs
-     * - Create GeneratorParams, set any generation options
-     * - Instantiate a Generator, feed in tokens, call generate()
-     * - Decode final sequences
+     * Streams generated tokens by calling the [onToken] callback with each new token.
+     *
+     * @param userInput The raw input from the user.
+     * @param onToken A callback invoked on each new token (or group of tokens) as they’re generated.
      */
-    fun generateText(prompt: String): String {
-        return try {
-            // Encode prompt into IDs
-            val inputTokens = tokenizer.encode(prompt)
+    fun streamText(userInput: String, onToken: (String) -> Unit) {
+        try {
+            // Wrap the user input with the chat template.
+            val prompt = "<|user|>\n${userInput} <|end|>\n<|assistant|>"
+            // Encode the prompt to tokens.
+            val inputSequences = tokenizer.encode(prompt)
+            val inputTokens = inputSequences.getSequence(0)
 
-            // Build generator parameters
+            // Set up the generator parameters (using max_length similar to your Python example).
             val generatorParams = GeneratorParams(model)
-            // For example, set max_length
-            generatorParams.setSearchOption("max_length", 512.0)
-            // You can add more:
-            // generatorParams.setSearchOption("temperature", 0.7)
-            // generatorParams.setSearchOption("top_p", 0.9)
-            // etc.
+            generatorParams.setSearchOption("max_length", 2048.0)
 
-            // Create a new generator
-            val generator = Generator(model, generatorParams)
-
-            // Feed the prompt tokens
-            generator.appendTokens(inputTokens)
-
-            // Perform single-shot generation
-            generator.generate()
-
-            // Retrieve the generated sequences (e.g., first sequence if batch size = 1)
-            val outputSequences = generator.getOutputSequences()
-            if (outputSequences.isEmpty()) {
-                "No output tokens were generated."
-            } else {
-                val firstSequence = outputSequences[0]
-                // Decode that token array back to string
-                val decodedText = tokenizer.decode(firstSequence)
-                Log.d("Phi4OnnxInference", "Generated text: $decodedText")
-
-                decodedText
+            // Create a Generator instance.
+            Generator(model, generatorParams).use { generator ->
+                // Append the input tokens.
+                generator.appendTokens(inputTokens)
+                // Use the Generator's iterator to stream tokens.
+                for (token in generator) {
+                    // Decode the individual token (wrap it in an array).
+                    val tokenText = tokenizer.decode(intArrayOf(token))
+                    // Emit the token text through the callback.
+                    onToken(tokenText)
+                }
             }
-
         } catch (ex: GenAIException) {
-            Log.e("Phi4OnnxInference", "Generation failed: ${ex.message}", ex)
-            "Error during generation: ${ex.message}"
+            onToken("Error during generation: ${ex.message}")
         }
     }
 }
