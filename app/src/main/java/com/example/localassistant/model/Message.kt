@@ -1,5 +1,9 @@
 package com.example.localassistant.model
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+
 enum class MessageType {
     SYSTEM,
     ASSISTANT,
@@ -10,10 +14,12 @@ sealed class Message {
     abstract val type: MessageType
 }
 
-data class TextMessage(
-    val text: String,
+class TextMessage(
+    initialText: String,
     override val type: MessageType
-) : Message()
+) : Message() {
+    var text by mutableStateOf(initialText)
+}
 
 data class ImageMessage(
     val imageUrl: String,
