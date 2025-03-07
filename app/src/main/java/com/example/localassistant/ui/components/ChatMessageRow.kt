@@ -15,7 +15,12 @@ fun ChatMessageRow(message: Message) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp),
+            .padding(
+                start = if (message.type == MessageType.USER) 16.dp else 0.dp,
+                end = if (message.type != MessageType.USER) 16.dp else 0.dp,
+                top = 4.dp,
+                bottom = 4.dp
+            ),
         horizontalArrangement = when (message.type) {
             MessageType.USER -> Arrangement.End
             else -> Arrangement.Start

@@ -2,8 +2,10 @@ package com.example.localassistant.ui.screens
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -34,7 +36,7 @@ fun ChatScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Chat") },
+                title = { Text("Chat with Phi4") },
                 actions = {
                     Button(onClick = onResetChat) {
                         Text("Reset")
@@ -57,6 +59,9 @@ fun ChatScreen(
             ) {
                 items(messages) { message ->
                     ChatMessageRow(message = message)
+                }
+                item {
+                    Spacer(modifier = Modifier.height(36.dp))
                 }
                 item {
                     OutlinedTextField(
