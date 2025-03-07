@@ -14,7 +14,6 @@ import com.example.localassistant.model.Message
 import com.example.localassistant.model.MessageType
 import com.example.localassistant.model.TextMessage
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -39,13 +38,18 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     val downloadError get() = _downloadError
 
     // -----------------------------
-    // 3) Model repository
+    // 3) System prompt state
+    // -----------------------------
+    val systemPrompt = mutableStateOf("You are a helpful AI assistant.")
+
+    // -----------------------------
+    // 4) Model repository
     // -----------------------------
     private val modelRepository = Phi4ModelRepository(application)
     private var onnxInference: Phi4OnnxInference? = null
 
     init {
-        // Add a welcome message
+        // Optionally, add a welcome message (if desired, you may later remove this during reset)
         _messages.add(
             TextMessage(
                 initialText = "Welcome! How can I help you today?",
@@ -106,7 +110,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
 
     // -----------------------------
-    // 4) Chat logic
+    // 5) Chat logic
     // -----------------------------
     fun sendUserMessage(text: String) {
         if (text.isBlank()) return
@@ -125,10 +129,21 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    /**
+     * Build the prompt for the model.
+     * We insert the system prompt at the top and then append the rest of the conversation.
+     */
     private fun buildPrompt(conversation: List<Message>): String {
         // The conversation list is stored with the newest message at index 0.
         // Reverse it to start with the oldest message.
         val sb = StringBuilder()
+        // Insert system prompt if available.
+        if (systemPrompt.value.isNotBlank()) {
+            sb.append("<|system|>\n")
+            sb.append(systemPrompt.value)
+            sb.append(" <|end|>\n")
+        }
+        // The conversation list is stored with the newest message at index 0. Reverse it to start with the oldest.
         conversation.reversed().forEach { message ->
             when (message) {
                 is TextMessage -> {
@@ -148,12 +163,11 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                         MessageType.SYSTEM -> TODO()
                     }
                 }
-                // Handle other types of Message if needed.
-                is AudioMessage -> TODO()
-                is ImageMessage -> TODO()
+                is AudioMessage -> { /* TODO: Handle audio if needed */ }
+                is ImageMessage -> { /* TODO: Handle image if needed */ }
             }
         }
-        // Now add the assistant token for the new reply.
+        // Append the assistant token to prompt a new reply.
         sb.append("<|assistant|>")
         return sb.toString()
     }
@@ -166,7 +180,6 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             .trim()
     }
 
-
     private fun extractAssistantReply(fullText: String): String {
         val marker = "<|assistant|>"
         val index = fullText.lastIndexOf(marker)
@@ -177,7 +190,6 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         }
         return cleanResponse(reply)
     }
-
 
     private fun generateAssistantResponse(userText: String) {
         viewModelScope.launch {
@@ -204,6 +216,11 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-
-
+    /**
+     * Reset the chat by clearing all messages.
+     * The system prompt (stored separately) is preserved.
+     */
+    fun resetChat() {
+        _messages.clear()
+    }
 }
