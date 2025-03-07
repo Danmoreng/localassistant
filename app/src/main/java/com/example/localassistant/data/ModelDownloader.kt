@@ -1,16 +1,14 @@
 package com.example.localassistant.data
 
-import android.content.Context
 import android.util.Log
 import okhttp3.OkHttpClient
-import okhttp3.Request
 import java.io.File
 import java.io.IOException
 import okhttp3.logging.HttpLoggingInterceptor
 
 object ModelDownloader {
     private val loggingInterceptor = HttpLoggingInterceptor { message ->
-        android.util.Log.d("OkHttp", message)
+        Log.d("OkHttp", message)
     }.apply {
         level = HttpLoggingInterceptor.Level.BASIC
     }
@@ -21,7 +19,7 @@ object ModelDownloader {
 
     @Throws(IOException::class)
     fun downloadFile(url: String, destFile: File) {
-        android.util.Log.d("ModelDownloader", "Starting download from $url")
+        Log.d("ModelDownloader", "Starting download from $url")
         val request = okhttp3.Request.Builder()
             .url(url)
             .header("User-Agent", "Mozilla/5.0 (compatible; LocalAssistant)")
@@ -29,11 +27,11 @@ object ModelDownloader {
 
         client.newCall(request).execute().use { response ->
             // Log the response code even if the response fails
-            android.util.Log.d("ModelDownloader", "Response code: ${response.code}")
+            Log.d("ModelDownloader", "Response code: ${response.code}")
 
             if (!response.isSuccessful) {
                 val errorMsg = "Failed to download file from $url: ${response.code} ${response.message}"
-                android.util.Log.e("ModelDownloader", errorMsg)
+                Log.e("ModelDownloader", errorMsg)
                 throw IOException(errorMsg)
             }
 
@@ -44,7 +42,7 @@ object ModelDownloader {
                 bodyStream.copyTo(output)
             }
 
-            android.util.Log.d("ModelDownloader", "File downloaded successfully: ${destFile.name}")
+            Log.d("ModelDownloader", "File downloaded successfully: ${destFile.name}")
         }
     }
 }
