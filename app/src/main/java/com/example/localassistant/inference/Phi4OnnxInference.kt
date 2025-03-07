@@ -33,13 +33,11 @@ class Phi4OnnxInference(
     /**
      * Streams generated tokens by calling the [onToken] callback with each new token.
      *
-     * @param userInput The raw input from the user.
+     * @param prompt Prompt in chat template format
      * @param onToken A callback invoked on each new token (or group of tokens) as they’re generated.
      */
-    fun streamText(userInput: String, onToken: (String) -> Unit) {
+    fun streamText(prompt: String, onToken: (String) -> Unit) {
         try {
-            // Wrap the user input with the chat template.
-            val prompt = "<|user|>\n${userInput} <|end|>\n<|assistant|>"
             // Encode the prompt to tokens.
             val inputSequences = tokenizer.encode(prompt)
             val inputTokens = inputSequences.getSequence(0)

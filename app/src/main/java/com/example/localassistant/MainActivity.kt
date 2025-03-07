@@ -29,9 +29,16 @@ class MainActivity : ComponentActivity() {
                 } else {
                     // When the model is available, display the chat screen
                     ChatScreen(
+                        systemPrompt = chatViewModel.systemPrompt.value,
+                        onSystemPromptChanged = { newPrompt ->
+                            chatViewModel.systemPrompt.value = newPrompt
+                        },
                         messages = chatViewModel.messages,
                         onMessageSent = { message ->
                             chatViewModel.sendMessage(message)
+                        },
+                        onResetChat = {
+                            chatViewModel.resetChat()
                         }
                     )
                 }
