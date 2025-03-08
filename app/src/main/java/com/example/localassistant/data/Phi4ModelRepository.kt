@@ -1,60 +1,67 @@
 package com.example.localassistant.data
 
 import android.content.Context
+import androidx.annotation.OptIn
+import androidx.media3.common.util.UnstableApi
+import kotlinx.coroutines.flow.Flow
 import java.io.File
 
-class Phi4ModelRepository(private val context: Context) {
+/**
+ * Repository that manages local Phi-4 model files.
+ */
+class Phi4ModelRepository(
+    context: Context,
+    private val remoteDataSource: RemoteModelDataSource
+) {
 
-    // The folder name in internal storage where we keep model files
+    // Directory in internal storage for model files
     private val modelDirName = "phi4_mini_instruct_cpu_int4"
-
-    // Directory object for the local model folder
-    private val modelDir: File
-        get() = File(context.filesDir, modelDirName)
+    private val modelDir: File = File(context.filesDir, modelDirName)
 
     /**
-     * Check if all required files are present in [modelDir].
+     * Returns a Flow of DownloadProgress for the subfolder’s files.
      */
-    fun isModelAvailable(): Boolean {
-        if (!modelDir.exists()) return false
-        // Ensure each required file is present and non-empty
-        return Phi4MiniFiles.REQUIRED_FILES.all { fileName ->
-            val file = File(modelDir, fileName)
-            file.exists() && file.length() > 0
-        }
+    @OptIn(UnstableApi::class)
+    suspend fun downloadAllInSubfolderFlow(
+        repoId: String,
+        branch: String,
+        subfolder: String
+    ): Flow<com.example.localassistant.data.DownloadProgress> {
+        return remoteDataSource.downloadSubfolderFlow(repoId, branch, subfolder, modelDir)
     }
 
     /**
-     * Download all required model files if they are missing.
-     * This might be called after user confirmation.
+     * Checks if all files for this subfolder exist locally and are non-empty.
+     * Returns true if all are found, false otherwise.
      */
-    @Throws(Exception::class)
-    fun downloadModelFiles() {
-        if (!modelDir.exists()) {
-            modelDir.mkdirs()
-        }
+    suspend fun isModelAvailable(): Boolean {
+    if (!modelDir.exists()) return false
 
-        Phi4MiniFiles.REQUIRED_FILES.forEach { fileName ->
-            val localFile = File(modelDir, fileName)
+    return try {
+        // Check the same subfolder the app uses
+        val repoId = "microsoft/Phi-4-mini-instruct-onnx"
+        val branch = "main"
+        val subfolder = "cpu_and_mobile/cpu-int4-rtn-block-32-acc-level-4"
+
+        val allFiles = remoteDataSource.listRepoFiles(repoId, branch)
+        val subfolderFiles = allFiles
+            .filter { it.rfilename.startsWith("$subfolder/") }
+
+        // Ensure each file is present locally and not zero-sized
+        for (hubFile in subfolderFiles) {
+            val localFileName = hubFile.rfilename.removePrefix("$subfolder/")
+            val localFile = File(modelDir, localFileName)
+
             if (!localFile.exists() || localFile.length() == 0L) {
-                val url = Phi4MiniFiles.getDownloadUrl(fileName)
-                ModelDownloader.downloadFile(url, localFile)
+                return false
             }
+            // Optionally also check localFile.length() == hubFile.size
         }
+        true
+    } catch (e: Exception) {
+        false
     }
+}
 
-    /**
-     * Returns the [File] path to the model directory.
-     * You can pass this to your ONNX loader, etc.
-     */
-    fun getModelDirectory(): File {
-        return modelDir
-    }
-
-    /**
-     * (Optional) Helper to get a specific file path by name.
-     */
-    fun getFilePath(fileName: String): String {
-        return File(modelDir, fileName).absolutePath
-    }
+    fun getModelDirectory(): File = modelDir
 }
