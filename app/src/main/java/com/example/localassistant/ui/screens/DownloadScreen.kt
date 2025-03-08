@@ -14,13 +14,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.example.localassistant.viewmodel.DownloadViewModel
 
 @Composable
 fun DownloadScreen(
-    isDownloading: Boolean,
-    downloadError: String?,
-    onDownloadClicked: () -> Unit
+    viewModel: DownloadViewModel
 ) {
+    val uiState = viewModel.uiState
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -29,27 +30,35 @@ fun DownloadScreen(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = "Model Not Downloaded",
+            text = "Model Download",
             style = MaterialTheme.typography.headlineSmall
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "To use the assistant, please download the ONNX model files from Hugging Face."
+            text = "This downloads all ONNX files from the Hugging Face subfolder."
         )
         Spacer(modifier = Modifier.height(16.dp))
-        if (isDownloading) {
+
+        if (uiState.isDownloading) {
             CircularProgressIndicator()
             Spacer(modifier = Modifier.height(16.dp))
-            Text("Downloading model, please wait...")
+
+            if (uiState.totalFiles > 0) {
+                Text("Downloading file ${uiState.currentFileIndex} of ${uiState.totalFiles}")
+                Text("Current: ${uiState.currentFileName}")
+            } else {
+                Text("Gathering file list...")
+            }
+
         } else {
-            if (downloadError != null) {
+            uiState.errorMessage?.let { errorMsg ->
                 Text(
-                    text = "Error: $downloadError",
+                    text = "Error: $errorMsg",
                     color = MaterialTheme.colorScheme.error
                 )
                 Spacer(modifier = Modifier.height(8.dp))
             }
-            Button(onClick = onDownloadClicked) {
+            Button(onClick = { viewModel.downloadModel() }) {
                 Text("Download Model")
             }
         }

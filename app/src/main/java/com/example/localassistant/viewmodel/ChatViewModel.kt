@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.localassistant.data.ModelDownloader
 import com.example.localassistant.data.Phi4ModelRepository
 import com.example.localassistant.inference.Phi4OnnxInference
 import com.example.localassistant.model.AudioMessage
@@ -45,7 +46,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     // -----------------------------
     // 4) Model repository
     // -----------------------------
-    private val modelRepository = Phi4ModelRepository(application)
+    private val repository = Phi4ModelRepository(application, ModelDownloader())
     private var onnxInference: Phi4OnnxInference? = null
 
     init {
@@ -57,19 +58,20 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             )
         )
 
-        // Check if model files already exist
-        _isModelAvailable.value = modelRepository.isModelAvailable()
+        viewModelScope.launch {
+            val available = repository.isModelAvailable() // <-- Suspend call
+            _isModelAvailable.value = available
 
-        // If model files are already there, initialize the inference session
-        if (_isModelAvailable.value) {
-            initOnnxInference()
+            if (available) {
+                initOnnxInference()
+            }
         }
     }
 
     private fun initOnnxInference() {
         try {
             // Get the absolute path where the model files were stored
-            val modelDirPath = modelRepository.getModelDirectory()
+            val modelDirPath = repository.getModelDirectory()
             // or modelRepository.modelDirectory.absolutePath, depending on your code
 
             onnxInference = Phi4OnnxInference(
@@ -85,47 +87,15 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     }
 
 
-    /**
-     * Called when the user wants to initiate a download of the model files.
-     */
-    fun downloadModel() {
-        Log.d("ChatViewModel", "Download model triggered")
-        viewModelScope.launch(Dispatchers.IO) { // Use Dispatchers.IO here
-            _isDownloading.value = true
-            _downloadError.value = null
-
-            try {
-                modelRepository.downloadModelFiles()
-                _isModelAvailable.value = true
-                // Once downloaded, initialize the inference
-                initOnnxInference()
-            } catch (e: Exception) {
-                _downloadError.value = e.message
-                Log.e("ChatViewModel", "Download failed", e)
-            } finally {
-                _isDownloading.value = false
-            }
-        }
-    }
-
-
     // -----------------------------
     // 5) Chat logic
     // -----------------------------
-    fun sendUserMessage(text: String) {
-        if (text.isBlank()) return
-        val userMessage = TextMessage(text, MessageType.USER)
-        _messages.add(0, userMessage)
-
-        // Optionally generate an AI assistant response
-        generateAssistantResponse(text)
-    }
 
     fun sendMessage(message: Message) {
         _messages.add(0, message)
 
         if (message is TextMessage && message.type == MessageType.USER) {
-            generateAssistantResponse(message.text)
+            generateAssistantResponse()
         }
     }
 
@@ -191,7 +161,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         return cleanResponse(reply)
     }
 
-    private fun generateAssistantResponse(userText: String) {
+    private fun generateAssistantResponse() {
         viewModelScope.launch {
             // Build the prompt using the current conversation history (without the new assistant message).
             val prompt = buildPrompt(_messages)
