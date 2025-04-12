@@ -8,7 +8,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.localassistant.data.ModelDownloader
 import com.example.localassistant.data.Phi4ModelRepository
-import com.example.localassistant.inference.Phi4OnnxInference
+import com.example.localassistant.inference.Phi4LlamaCppInference
 import com.example.localassistant.model.AudioMessage
 import com.example.localassistant.model.ImageMessage
 import com.example.localassistant.model.Message
@@ -47,7 +47,8 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     // 4) Model repository
     // -----------------------------
     private val repository = Phi4ModelRepository(application, ModelDownloader())
-    private var onnxInference: Phi4OnnxInference? = null
+    private var llamaCppInference: Phi4LlamaCppInference? = null
+    private var llamaCppModelContext: Long? = null
 
     init {
         // Optionally, add a welcome message (if desired, you may later remove this during reset)
@@ -74,17 +75,18 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
             val modelDirPath = repository.getModelDirectory()
             // or modelRepository.modelDirectory.absolutePath, depending on your code
 
-            onnxInference = Phi4OnnxInference(
-                context = getApplication(),
-                modelDirPath = modelDirPath.toString()
-            )
+            llamaCppInference = Phi4LlamaCppInference().also { Log.d("ChatViewModel", "Created Phi4LlamaCppInference instance") }
+            llamaCppModelContext = llamaCppInference?.loadModelFromFile("${modelDirPath}/ggml-model-f16.bin")
 
-            Log.d("ChatViewModel", "ONNX Inference initialized.")
+            if (llamaCppModelContext != null) {
+                Log.d("ChatViewModel", "llama.cpp Inference initialized.")
+            } else {
+                Log.e("ChatViewModel", "Failed to initialize llama.cpp Inference")
+            }
 
         } catch (e: Exception) {
-            Log.e("ChatViewModel", "Failed to init Onnx Inference", e)
-        }
-    }
+            Log.e("ChatViewModel", "Failed to initialize llama.cpp Inference", e)        }
+     }
 
 
     // -----------------------------
@@ -165,22 +167,14 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             // Build the prompt using the current conversation history (without the new assistant message).
             val prompt = buildPrompt(_messages)
-            // Create an empty assistant message for streaming response.
-            val assistantMessage = TextMessage("", MessageType.ASSISTANT)
+            val assistantMessage = TextMessage("...", MessageType.ASSISTANT) // Show typing indicator
             _messages.add(0, assistantMessage)
-            // Buffer for accumulating generated tokens.
-            var accumulatedText = ""
 
-            // Run generation on IO thread.
-            withContext(Dispatchers.IO) {
-                onnxInference?.streamText(prompt) { newToken ->
-                    accumulatedText += newToken
-                    // Extract the actual assistant reply.
-                    val cleanedReply = extractAssistantReply(accumulatedText)
-                    // Update UI on the main thread.
-                    viewModelScope.launch(Dispatchers.Main) {
-                        assistantMessage.text = cleanedReply
-                    }
+            withContext(Dispatchers.IO) { // Offload to IO thread
+                val cleanedReply = extractAssistantReply(response)
+
+                viewModelScope.launch(Dispatchers.Main) {
+                    assistantMessage.text = cleanedReply
                 }
             }
         }
@@ -192,5 +186,16 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
      */
     fun resetChat() {
         _messages.clear()
+    }
+
+    /**
+     * When the ViewModel is destroyed, make sure to release the llama.cpp resources.
+     */
+    override fun onCleared() {
+        super.onCleared()
+        if (llamaCppModelContext != null) {
+            llamaCppInference?.unloadModel(llamaCppModelContext!!)
+            llamaCppModelContext = null
+        }
     }
 }
