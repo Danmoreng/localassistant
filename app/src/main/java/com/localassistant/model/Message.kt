@@ -1,4 +1,4 @@
-package com.example.localassistant.model
+package com.localassistant.model
 
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf

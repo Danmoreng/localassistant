@@ -1,4 +1,4 @@
-package com.example.localassistant.ui.theme
+package com.localassistant.ui.theme
 
 import android.app.Activity
 import android.os.Build

@@ -1,4 +1,4 @@
-package com.example.localassistant.data
+package com.localassistant.data
 
 import android.util.Log
 import androidx.annotation.OptIn

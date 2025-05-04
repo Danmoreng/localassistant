@@ -1,4 +1,4 @@
-package com.example.localassistant.data
+package com.localassistant.data
 
 object Phi4MiniFiles {
     // Subfolder in the HF repo

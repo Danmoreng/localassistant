@@ -1,4 +1,4 @@
-package com.example.localassistant.ui.screens
+package com.localassistant.ui.screens
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -18,11 +18,11 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.example.localassistant.model.Message
-import com.example.localassistant.model.MessageType
-import com.example.localassistant.model.TextMessage
-import com.example.localassistant.ui.components.ChatInput
-import com.example.localassistant.ui.components.ChatMessageRow
+import com.localassistant.model.Message
+import com.localassistant.model.MessageType
+import com.localassistant.model.TextMessage
+import com.localassistant.ui.components.ChatInput
+import com.localassistant.ui.components.ChatMessageRow
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

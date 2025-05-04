@@ -1,4 +1,4 @@
-package com.example.localassistant.ui.components
+package com.localassistant.ui.components
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -9,7 +9,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
-import com.example.localassistant.model.*
+import com.localassistant.model.*
+import com.localassistant.model.AudioMessage
+import com.localassistant.model.ImageMessage
+import com.localassistant.model.Message
+import com.localassistant.model.MessageType
+import com.localassistant.model.TextMessage
 
 @Composable
 fun ChatBubble(message: Message) {

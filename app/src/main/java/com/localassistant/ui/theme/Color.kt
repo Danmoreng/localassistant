@@ -1,4 +1,4 @@
-package com.example.localassistant.ui.theme
+package com.localassistant.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

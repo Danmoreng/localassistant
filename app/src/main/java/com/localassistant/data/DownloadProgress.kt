@@ -1,4 +1,4 @@
-package com.example.localassistant.data
+package com.localassistant.data
 
 /**
  * A sealed class to represent download progress states in a Flow.

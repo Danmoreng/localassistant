@@ -1,4 +1,4 @@
-package com.example.localassistant.viewmodel
+package com.localassistant.viewmodel
 
 import android.app.Application
 import android.util.Log
@@ -6,14 +6,14 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.localassistant.data.ModelDownloader
-import com.example.localassistant.data.Phi4ModelRepository
-import com.example.localassistant.inference.Phi4OnnxInference
-import com.example.localassistant.model.AudioMessage
-import com.example.localassistant.model.ImageMessage
-import com.example.localassistant.model.Message
-import com.example.localassistant.model.MessageType
-import com.example.localassistant.model.TextMessage
+import com.localassistant.data.ModelDownloader
+import com.localassistant.data.Phi4ModelRepository
+import com.localassistant.inference.Phi4OnnxInference
+import com.localassistant.model.AudioMessage
+import com.localassistant.model.ImageMessage
+import com.localassistant.model.Message
+import com.localassistant.model.MessageType
+import com.localassistant.model.TextMessage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext

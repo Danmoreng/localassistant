@@ -1,4 +1,4 @@
-package com.example.localassistant.ui.components
+package com.localassistant.ui.components
 
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
