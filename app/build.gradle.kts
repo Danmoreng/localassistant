@@ -6,11 +6,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.localassistant"
+    namespace = "com.localassistant"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.localassistant"
+        applicationId = "com.localassistant"
         minSdk = 34
         targetSdk = 35
         versionCode = 1

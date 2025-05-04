@@ -1,4 +1,4 @@
-package com.example.localassistant
+package com.localassistant
 
 import org.junit.Test
 

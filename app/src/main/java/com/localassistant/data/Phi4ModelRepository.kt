@@ -1,4 +1,4 @@
-package com.example.localassistant.data
+package com.localassistant.data
 
 import android.content.Context
 import androidx.annotation.OptIn
@@ -26,7 +26,7 @@ class Phi4ModelRepository(
         repoId: String,
         branch: String,
         subfolder: String
-    ): Flow<com.example.localassistant.data.DownloadProgress> {
+    ): Flow<DownloadProgress> {
         return remoteDataSource.downloadSubfolderFlow(repoId, branch, subfolder, modelDir)
     }
 

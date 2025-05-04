@@ -1,14 +1,14 @@
-package com.example.localassistant
+package com.localassistant
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.localassistant.ui.screens.ChatScreen
-import com.example.localassistant.ui.screens.DownloadScreen
-import com.example.localassistant.ui.theme.LocalAssistantTheme
-import com.example.localassistant.viewmodel.ChatViewModel
-import com.example.localassistant.viewmodel.DownloadViewModel
+import com.localassistant.ui.screens.ChatScreen
+import com.localassistant.ui.screens.DownloadScreen
+import com.localassistant.ui.theme.LocalAssistantTheme
+import com.localassistant.viewmodel.ChatViewModel
+import com.localassistant.viewmodel.DownloadViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

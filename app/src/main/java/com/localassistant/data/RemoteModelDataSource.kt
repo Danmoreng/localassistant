@@ -1,4 +1,4 @@
-package com.example.localassistant.data
+package com.localassistant.data
 
 import androidx.annotation.OptIn
 import androidx.media3.common.util.UnstableApi
@@ -31,5 +31,5 @@ interface RemoteModelDataSource {
         branch: String = "main",
         subfolder: String,
         destDir: File
-    ): Flow<com.example.localassistant.data.DownloadProgress>
+    ): Flow<com.localassistant.data.DownloadProgress>
 }

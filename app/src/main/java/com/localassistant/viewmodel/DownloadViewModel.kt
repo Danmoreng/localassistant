@@ -1,4 +1,4 @@
-package com.example.localassistant.viewmodel
+package com.localassistant.viewmodel
 
 import android.app.Application
 import androidx.compose.runtime.getValue
@@ -6,9 +6,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.localassistant.data.DownloadProgress
-import com.example.localassistant.data.ModelDownloader
-import com.example.localassistant.data.Phi4ModelRepository
+import com.localassistant.data.DownloadProgress
+import com.localassistant.data.ModelDownloader
+import com.localassistant.data.Phi4ModelRepository
 import kotlinx.coroutines.launch
 
 /**

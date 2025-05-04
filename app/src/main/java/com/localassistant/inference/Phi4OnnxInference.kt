@@ -1,4 +1,4 @@
-package com.example.localassistant.inference
+package com.localassistant.inference
 
 import android.content.Context
 import android.util.Log

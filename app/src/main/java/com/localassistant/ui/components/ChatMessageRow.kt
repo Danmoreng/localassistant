@@ -1,4 +1,4 @@
-package com.example.localassistant.ui.components
+package com.localassistant.ui.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -7,8 +7,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.example.localassistant.model.Message
-import com.example.localassistant.model.MessageType
+import com.localassistant.model.Message
+import com.localassistant.model.MessageType
 
 @Composable
 fun ChatMessageRow(message: Message) {
