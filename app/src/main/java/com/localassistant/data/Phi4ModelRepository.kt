@@ -12,7 +12,7 @@ import java.io.File
 class Phi4ModelRepository(
     context: Context,
     private val remoteDataSource: RemoteModelDataSource
-) {
+) : ModelRepository {
 
     // Directory in internal storage for model files
     private val modelDirName = "phi4_mini_instruct_cpu_int4"
@@ -22,7 +22,7 @@ class Phi4ModelRepository(
      * Returns a Flow of DownloadProgress for the subfolder’s files.
      */
     @OptIn(UnstableApi::class)
-    suspend fun downloadAllInSubfolderFlow(
+    override suspend fun downloadAllInSubfolderFlow(
         repoId: String,
         branch: String,
         subfolder: String
@@ -34,7 +34,7 @@ class Phi4ModelRepository(
      * Checks if all files for this subfolder exist locally and are non-empty.
      * Returns true if all are found, false otherwise.
      */
-    suspend fun isModelAvailable(): Boolean {
+    override suspend fun isModelAvailable(): Boolean {
     if (!modelDir.exists()) return false
 
     return try {
@@ -63,5 +63,5 @@ class Phi4ModelRepository(
     }
 }
 
-    fun getModelDirectory(): File = modelDir
+    override fun getModelDirectory(): File = modelDir
 }

@@ -6,19 +6,23 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.localassistant.data.ModelDownloader
-import com.localassistant.data.Phi4ModelRepository
-import com.localassistant.inference.Phi4OnnxInference
+import com.localassistant.data.ModelRepository
+import com.localassistant.engine.InferenceEngine
 import com.localassistant.model.AudioMessage
 import com.localassistant.model.ImageMessage
 import com.localassistant.model.Message
 import com.localassistant.model.MessageType
 import com.localassistant.model.TextMessage
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class ChatViewModel(application: Application) : AndroidViewModel(application) {
+class ChatViewModel(
+    application: Application,
+    private val repository: ModelRepository,
+    private val onnxInference: InferenceEngine
+) : AndroidViewModel(application) {
 
     // -----------------------------
     // 1) Chat messages state
@@ -43,12 +47,6 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
     // -----------------------------
     val systemPrompt = mutableStateOf("You are a helpful AI assistant.")
 
-    // -----------------------------
-    // 4) Model repository
-    // -----------------------------
-    private val repository = Phi4ModelRepository(application, ModelDownloader())
-    private var onnxInference: Phi4OnnxInference? = null
-
     init {
         // Optionally, add a welcome message (if desired, you may later remove this during reset)
         _messages.add(
@@ -57,35 +55,10 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
                 type = MessageType.ASSISTANT
             )
         )
-
         viewModelScope.launch {
-            val available = repository.isModelAvailable() // <-- Suspend call
-            _isModelAvailable.value = available
-
-            if (available) {
-                initOnnxInference()
-            }
+            _isModelAvailable.value = repository.isModelAvailable()
         }
     }
-
-    private fun initOnnxInference() {
-        try {
-            // Get the absolute path where the model files were stored
-            val modelDirPath = repository.getModelDirectory()
-            // or modelRepository.modelDirectory.absolutePath, depending on your code
-
-            onnxInference = Phi4OnnxInference(
-                context = getApplication(),
-                modelDirPath = modelDirPath.toString()
-            )
-
-            Log.d("ChatViewModel", "ONNX Inference initialized.")
-
-        } catch (e: Exception) {
-            Log.e("ChatViewModel", "Failed to init Onnx Inference", e)
-        }
-    }
-
 
     // -----------------------------
     // 5) Chat logic
@@ -173,7 +146,7 @@ class ChatViewModel(application: Application) : AndroidViewModel(application) {
 
             // Run generation on IO thread.
             withContext(Dispatchers.IO) {
-                onnxInference?.streamText(prompt) { newToken ->
+                onnxInference.generateResponse(prompt).collect { newToken ->
                     accumulatedText += newToken
                     // Extract the actual assistant reply.
                     val cleanedReply = extractAssistantReply(accumulatedText)

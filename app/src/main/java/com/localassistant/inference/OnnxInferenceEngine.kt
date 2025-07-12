@@ -3,15 +3,19 @@ package com.localassistant.inference
 import android.content.Context
 import android.util.Log
 import ai.onnxruntime.genai.GenAIException
+import ai.onnxruntime.genai.Generator
+import ai.onnxruntime.genai.GeneratorParams
 import ai.onnxruntime.genai.Model
 import ai.onnxruntime.genai.Tokenizer
-import ai.onnxruntime.genai.GeneratorParams
-import ai.onnxruntime.genai.Generator
+import com.localassistant.engine.InferenceEngine
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 
-class Phi4OnnxInference(
+class OnnxInferenceEngine(
     private val context: Context,
     private val modelDirPath: String
-) {
+) : InferenceEngine {
     private val model: Model
     private val tokenizer: Tokenizer
 
@@ -19,24 +23,18 @@ class Phi4OnnxInference(
         try {
             // 1) Load the model from the given folder
             model = Model(modelDirPath)
-            Log.d("Phi4OnnxInference", "Model loaded from $modelDirPath")
+            Log.d("OnnxInferenceEngine", "Model loaded from $modelDirPath")
 
             // 2) Create the tokenizer from the model
             tokenizer = Tokenizer(model)
-            Log.d("Phi4OnnxInference", "Tokenizer created successfully.")
+            Log.d("OnnxInferenceEngine", "Tokenizer created successfully.")
 
         } catch (ex: GenAIException) {
             throw RuntimeException("Failed to initialize GenAI Model/Tokenizer", ex)
         }
     }
 
-    /**
-     * Streams generated tokens by calling the [onToken] callback with each new token.
-     *
-     * @param prompt Prompt in chat template format
-     * @param onToken A callback invoked on each new token (or group of tokens) as they’re generated.
-     */
-    fun streamText(prompt: String, onToken: (String) -> Unit) {
+    override fun generateResponse(prompt: String): Flow<String> = callbackFlow {
         try {
             // Encode the prompt to tokens.
             val inputSequences = tokenizer.encode(prompt)
@@ -55,11 +53,14 @@ class Phi4OnnxInference(
                     // Decode the individual token (wrap it in an array).
                     val tokenText = tokenizer.decode(intArrayOf(token))
                     // Emit the token text through the callback.
-                    onToken(tokenText)
+                    send(tokenText)
                 }
             }
         } catch (ex: GenAIException) {
-            onToken("Error during generation: ${ex.message}")
+            send("Error during generation: ${ex.message}")
+        }
+        awaitClose {
+            // Close any resources if necessary
         }
     }
 }
