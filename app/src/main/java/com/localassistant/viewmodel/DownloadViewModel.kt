@@ -7,8 +7,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.localassistant.data.DownloadProgress
-import com.localassistant.data.ModelDownloader
-import com.localassistant.data.Phi4ModelRepository
+import com.localassistant.data.ModelRepository
 import kotlinx.coroutines.launch
 
 /**
@@ -23,14 +22,9 @@ data class DownloadUiState(
 )
 
 class DownloadViewModel(
-    application: Application
+    application: Application,
+    private val repository: ModelRepository
 ) : AndroidViewModel(application) {
-
-    // In a real app with DI, you'd @Inject these properly. For demo:
-    private val repository = Phi4ModelRepository(
-        context = application,
-        remoteDataSource = ModelDownloader()
-    )
 
     var uiState by mutableStateOf(DownloadUiState())
         private set

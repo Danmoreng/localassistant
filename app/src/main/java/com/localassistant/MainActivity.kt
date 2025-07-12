@@ -15,8 +15,38 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             LocalAssistantTheme {
-                val downloadViewModel: DownloadViewModel = viewModel()
-                val chatViewModel: ChatViewModel = viewModel()
+                val downloadViewModel: DownloadViewModel = viewModel(
+                    factory = object : androidx.lifecycle.ViewModelProvider.Factory {
+                        override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+                            return DownloadViewModel(
+                                application = application,
+                                repository = com.localassistant.data.Phi4ModelRepository(
+                                    context = application,
+                                    remoteDataSource = com.localassistant.data.ModelDownloader()
+                                )
+                            ) as T
+                        }
+                    }
+                )
+                val chatViewModel: ChatViewModel = viewModel(
+                    factory = object : androidx.lifecycle.ViewModelProvider.Factory {
+                        override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+                            val repository = com.localassistant.data.Phi4ModelRepository(
+                                context = application,
+                                remoteDataSource = com.localassistant.data.ModelDownloader()
+                            )
+                            val onnxInference = com.localassistant.inference.OnnxInferenceEngine(
+                                context = application,
+                                modelDirPath = repository.getModelDirectory().absolutePath
+                            )
+                            return ChatViewModel(
+                                application = application,
+                                repository = repository,
+                                onnxInference = onnxInference
+                            ) as T
+                        }
+                    }
+                )
 
                 // Check if the model is available
                 if (!downloadViewModel.isModelAvailable) {
