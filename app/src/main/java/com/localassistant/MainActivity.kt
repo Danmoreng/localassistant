@@ -67,10 +67,19 @@ class MainActivity : ComponentActivity() {
                 } else {
                     var isModelAvailabilityChecked by rememberSaveable { mutableStateOf(false) }
 
-                    LaunchedEffect(downloadViewModel) {
+                    LaunchedEffect(downloadViewModel, selectedEngine) {
                         isModelAvailabilityChecked = false
                         downloadViewModel.checkModelAvailability()
                         isModelAvailabilityChecked = true
+
+                        if (selectedEngine == Engine.LLAMA_CPP && downloadViewModel.isModelAvailable) {
+                            val repository = LlamaModelRepository(
+                                context = application,
+                                remoteDataSource = ModelDownloader()
+                            )
+                            val modelPath = repository.getModelPath()
+                            android.llama.cpp.LLamaAndroid.instance().load(modelPath)
+                        }
                     }
 
                     if (!isModelAvailabilityChecked) {
@@ -95,6 +104,7 @@ class MainActivity : ComponentActivity() {
 
                                     val inferenceEngine = when (selectedEngine) {
                                         Engine.LLAMA_CPP -> LlamaCppInferenceEngine(
+                                            context = application,
                                             modelPath = (repository as LlamaModelRepository).getModelPath()
                                         )
                                         Engine.ONNX -> OnnxInferenceEngine(

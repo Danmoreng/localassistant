@@ -72,72 +72,14 @@ class ChatViewModel(
         }
     }
 
-    /**
-     * Build the prompt for the model.
-     * We insert the system prompt at the top and then append the rest of the conversation.
-     */
-    private fun buildPrompt(conversation: List<Message>): String {
-        // The conversation list is stored with the newest message at index 0.
-        // Reverse it to start with the oldest message.
-        val sb = StringBuilder()
-        // Insert system prompt if available.
-        if (systemPrompt.value.isNotBlank()) {
-            sb.append("<|system|>\n")
-            sb.append(systemPrompt.value)
-            sb.append(" <|end|>\n")
-        }
-        // The conversation list is stored with the newest message at index 0. Reverse it to start with the oldest.
-        conversation.reversed().forEach { message ->
-            when (message) {
-                is TextMessage -> {
-                    when (message.type) {
-                        MessageType.USER -> {
-                            // Append the user message using the chat template.
-                            sb.append("<|user|>\n")
-                            sb.append(message.text)
-                            sb.append(" <|end|>\n")
-                        }
-                        MessageType.ASSISTANT -> {
-                            sb.append("<|assistant|>\n")
-                            sb.append(message.text)
-                            sb.append(" <|end|>\n")
-                        }
-                        // Add other message types if needed.
-                        MessageType.SYSTEM -> TODO()
-                    }
-                }
-                is AudioMessage -> { /* TODO: Handle audio if needed */ }
-                is ImageMessage -> { /* TODO: Handle image if needed */ }
-            }
-        }
-        // Append the assistant token to prompt a new reply.
-        sb.append("<|assistant|>")
-        return sb.toString()
-    }
+    
 
-    private fun cleanResponse(response: String): String {
-        return response
-            .replace("<|assistant|>", "")
-            .replace("<|user|>", "")
-            .replace("<|end|>", "")
-            .trim()
-    }
-
-    private fun extractAssistantReply(fullText: String): String {
-        val marker = "<|assistant|>"
-        val index = fullText.lastIndexOf(marker)
-        val reply = if (index != -1) {
-            fullText.substring(index + marker.length)
-        } else {
-            fullText
-        }
-        return cleanResponse(reply)
-    }
+    
 
     private fun generateAssistantResponse() {
         viewModelScope.launch {
-            // Build the prompt using the current conversation history (without the new assistant message).
-            val prompt = buildPrompt(_messages)
+            // Build the prompt using the current conversation history and system prompt.
+            val prompt = inferenceEngine.formatChat(_messages, systemPrompt.value)
             // Create an empty assistant message for streaming response.
             val assistantMessage = TextMessage("", MessageType.ASSISTANT)
             _messages.add(0, assistantMessage)
@@ -148,11 +90,9 @@ class ChatViewModel(
             withContext(Dispatchers.IO) {
                 inferenceEngine.generateResponse(prompt).collect { newToken ->
                     accumulatedText += newToken
-                    // Extract the actual assistant reply.
-                    val cleanedReply = extractAssistantReply(accumulatedText)
                     // Update UI on the main thread.
                     viewModelScope.launch(Dispatchers.Main) {
-                        assistantMessage.text = cleanedReply
+                        assistantMessage.text = accumulatedText
                     }
                 }
             }
