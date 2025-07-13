@@ -3,7 +3,9 @@ package com.localassistant
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -29,6 +31,8 @@ class MainActivity : ComponentActivity() {
             LocalAssistantTheme {
                 var selectedEngine by rememberSaveable { mutableStateOf(Engine.ONNX) }
                 var showSettings by rememberSaveable { mutableStateOf(false) }
+                var resetKey by rememberSaveable { mutableIntStateOf(0) }
+                
 
                 val downloadViewModel: DownloadViewModel = viewModel(
                     key = selectedEngine.name, // Recreate ViewModel when engine changes
@@ -60,58 +64,70 @@ class MainActivity : ComponentActivity() {
                             showSettings = false
                         }
                     )
-                } else if (!downloadViewModel.isModelAvailable) {
-                    DownloadScreen(viewModel = downloadViewModel)
                 } else {
-                    val chatViewModel: ChatViewModel = viewModel(
-                        key = selectedEngine.name, // Recreate ViewModel when engine changes
-                        factory = object : androidx.lifecycle.ViewModelProvider.Factory {
-                            override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
-                                val repository = when (selectedEngine) {
-                                    Engine.LLAMA_CPP -> LlamaModelRepository(
-                                        context = application,
-                                        remoteDataSource = ModelDownloader()
-                                    )
-                                    Engine.ONNX -> Phi4ModelRepository(
-                                        context = application,
-                                        remoteDataSource = ModelDownloader()
-                                    )
-                                }
+                    var isModelAvailabilityChecked by rememberSaveable { mutableStateOf(false) }
 
-                                val inferenceEngine = when (selectedEngine) {
-                                    Engine.LLAMA_CPP -> LlamaCppInferenceEngine(
-                                        modelPath = (repository as LlamaModelRepository).getModelPath()
-                                    )
-                                    Engine.ONNX -> OnnxInferenceEngine(
-                                        context = application,
-                                        modelDirPath = repository.getModelDirectory().absolutePath
-                                    )
-                                }
+                    LaunchedEffect(downloadViewModel) {
+                        isModelAvailabilityChecked = false
+                        downloadViewModel.checkModelAvailability()
+                        isModelAvailabilityChecked = true
+                    }
 
-                                return ChatViewModel(
-                                    application = application,
-                                    repository = repository,
-                                    inferenceEngine = inferenceEngine
-                                ) as T
+                    if (!isModelAvailabilityChecked) {
+                        // You can show a loading indicator here
+                    } else if (!downloadViewModel.isModelAvailable) {
+                        DownloadScreen(viewModel = downloadViewModel)
+                    } else {
+                        val chatViewModel: ChatViewModel = viewModel(
+                            key = "${selectedEngine.name}_$resetKey", // Recreate ViewModel when engine or resetKey changes
+                            factory = object : androidx.lifecycle.ViewModelProvider.Factory {
+                                override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
+                                    val repository = when (selectedEngine) {
+                                        Engine.LLAMA_CPP -> LlamaModelRepository(
+                                            context = application,
+                                            remoteDataSource = ModelDownloader()
+                                        )
+                                        Engine.ONNX -> Phi4ModelRepository(
+                                            context = application,
+                                            remoteDataSource = ModelDownloader()
+                                        )
+                                    }
+
+                                    val inferenceEngine = when (selectedEngine) {
+                                        Engine.LLAMA_CPP -> LlamaCppInferenceEngine(
+                                            modelPath = (repository as LlamaModelRepository).getModelPath()
+                                        )
+                                        Engine.ONNX -> OnnxInferenceEngine(
+                                            context = application,
+                                            modelDirPath = repository.getModelDirectory().absolutePath
+                                        )
+                                    }
+
+                                    return ChatViewModel(
+                                        application = application,
+                                        repository = repository,
+                                        inferenceEngine = inferenceEngine
+                                    ) as T
+                                }
                             }
-                        }
-                    )
-                    ChatScreen(
-                        systemPrompt = chatViewModel.systemPrompt.value,
-                        onSystemPromptChanged = { newPrompt ->
-                            chatViewModel.systemPrompt.value = newPrompt
-                        },
-                        messages = chatViewModel.messages,
-                        onMessageSent = { message ->
-                            chatViewModel.sendMessage(message)
-                        },
-                        onResetChat = {
-                            chatViewModel.resetChat()
-                        },
-                        onSettingsClicked = {
-                            showSettings = true
-                        }
-                    )
+                        )
+                        ChatScreen(
+                            systemPrompt = chatViewModel.systemPrompt.value,
+                            onSystemPromptChanged = { newPrompt ->
+                                chatViewModel.systemPrompt.value = newPrompt
+                            },
+                            messages = chatViewModel.messages,
+                            onMessageSent = { message ->
+                                chatViewModel.sendMessage(message)
+                            },
+                            onResetChat = {
+                                chatViewModel.resetChat()
+                            },
+                            onSettingsClicked = {
+                                showSettings = true
+                            }
+                        )
+                    }
                 }
             }
         }

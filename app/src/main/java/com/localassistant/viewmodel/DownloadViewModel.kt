@@ -40,6 +40,12 @@ class DownloadViewModel(
         }
     }
 
+    fun checkModelAvailability() {
+        viewModelScope.launch {
+            isModelAvailable = repository.isModelAvailable()
+        }
+    }
+
     fun downloadModel() {
 
         // Update UI to "downloading" state

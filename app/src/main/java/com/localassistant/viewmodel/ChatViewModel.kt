@@ -166,4 +166,8 @@ class ChatViewModel(
     fun resetChat() {
         _messages.clear()
     }
+
+    fun resetInferenceEngine() {
+        // This function will be used to trigger the recomposition of the ChatScreen
+    }
 }
