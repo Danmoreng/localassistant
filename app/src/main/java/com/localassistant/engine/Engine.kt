@@ -1,4 +1,6 @@
 package com.localassistant.engine
 
-class Engine {
+enum class Engine {
+    ONNX,
+    LLAMA_CPP
 }

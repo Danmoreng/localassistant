@@ -21,7 +21,7 @@ import kotlinx.coroutines.withContext
 class ChatViewModel(
     application: Application,
     private val repository: ModelRepository,
-    private val onnxInference: InferenceEngine
+    private val inferenceEngine: InferenceEngine
 ) : AndroidViewModel(application) {
 
     // -----------------------------
@@ -146,7 +146,7 @@ class ChatViewModel(
 
             // Run generation on IO thread.
             withContext(Dispatchers.IO) {
-                onnxInference.generateResponse(prompt).collect { newToken ->
+                inferenceEngine.generateResponse(prompt).collect { newToken ->
                     accumulatedText += newToken
                     // Extract the actual assistant reply.
                     val cleanedReply = extractAssistantReply(accumulatedText)
