@@ -15,8 +15,8 @@ class LlamaModelRepository(
     }
 
     // Using a single file GGUF model for now
-    private val modelName = "phi-2.Q2_K.gguf"
-    private val modelUrl = "https://huggingface.co/TheBloke/phi-2-GGUF/resolve/main/phi-2.Q2_K.gguf"
+    private val modelName = "gemma-3n-E2B-it-Q4_0.gguf"
+    private val modelUrl = "https://huggingface.co/unsloth/gemma-3n-E2B-it-GGUF/resolve/main/gemma-3n-E2B-it-Q4_0.gguf"
 
     override suspend fun downloadAllInSubfolderFlow(
         repoId: String,

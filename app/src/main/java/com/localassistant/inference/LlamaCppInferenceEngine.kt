@@ -6,7 +6,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.runBlocking
 
 class LlamaCppInferenceEngine(
-    modelPath: String
+    private val modelPath: String
 ) : InferenceEngine {
 
     private val llama = LLamaAndroid.instance()
