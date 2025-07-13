@@ -11,6 +11,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -31,13 +35,17 @@ fun ChatScreen(
     onSystemPromptChanged: (String) -> Unit,
     messages: List<Message>,
     onMessageSent: (Message) -> Unit,
-    onResetChat: () -> Unit
+    onResetChat: () -> Unit,
+    onSettingsClicked: () -> Unit
 ) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Chat with Phi4") },
+                title = { Text("Local Assistant") },
                 actions = {
+                    IconButton(onClick = onSettingsClicked) {
+                        Icon(Icons.Default.Settings, contentDescription = "Settings")
+                    }
                     Button(onClick = onResetChat) {
                         Text("Reset")
                     }

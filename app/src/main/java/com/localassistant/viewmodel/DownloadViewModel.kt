@@ -69,6 +69,7 @@ class DownloadViewModel(
                     is DownloadProgress.Success -> {
                         // Mark as done
                         uiState = uiState.copy(isDownloading = false)
+                        isModelAvailable = true
                     }
                     is DownloadProgress.Error -> {
                         // Show error

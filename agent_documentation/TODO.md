@@ -2,43 +2,31 @@
 
 This document outlines the planned refactoring and improvements for the LocalAssistant app.
 
-## 1. Modularization
+## Current Status (Engine-Switching Implemented)
 
-The current app structure is being modularized to improve maintainability, testability, and prepare for future features.
+The application now fully supports both **ONNX Runtime** and **Llama.cpp** as selectable inference engines. The integration is complete, and users can switch between them at runtime via a new settings screen. All major bugs identified during the integration process have been resolved.
 
-**Progress:**
+## Integration & Bug Fix Checklist
 
-*   **`core/engine` module moved to `app/src/main/java/com/localassistant/engine`:** The `InferenceEngine` interface and `Engine.kt` have been moved to the `app` module for now. A dedicated `core` module for general business logic might be considered later if more shared components emerge.
+Here is the breakdown of the completed integration and bug-fixing steps:
 
-**Remaining Plan:**
+- [x] **Add `llama.cpp` as a Git Submodule:** Added the official `llama.cpp` repository as a git submodule.
+- [x] **Integrate `:llama` Android Library:** Configured `settings.gradle.kts` and `app/build.gradle.kts` to include the `:llama` module from the submodule.
+- [x] **Create `LlamaCppInferenceEngine`:** Implemented the `LlamaCppInferenceEngine` class, which conforms to the `InferenceEngine` interface.
+- [x] **Create `LlamaModelRepository`:** Implemented the `LlamaModelRepository` to manage the download of GGUF models.
+- [x] **Refactor ViewModels:** Updated `ChatViewModel` to use the generic `InferenceEngine` interface, decoupling it from any specific implementation.
+- [x] **Resolve Build Issues:** Fixed various compilation errors related to dependency injection, constructor mismatches, and interface definitions.
+- [x] **Fix Runtime Crash on Startup:** Resolved a crash caused by the app trying to load a model before it was downloaded. The fix involved deferring the `ChatViewModel` creation until after the model's existence is verified.
+- [x] **Fix File Download Error:** Corrected an `ENOENT (No such file or directory)` error by ensuring the parent directory is created before writing a downloaded model file to disk.
+- [x] **Fix Download Screen State:** Fixed a bug where the UI would not automatically transition from the download screen to the chat screen upon completion. This was resolved by correctly updating the `isModelAvailable` state in the `DownloadViewModel`.
+- [x] **Implement Engine-Switching UI:**
+    - Created an `Engine` enum to represent the available backends.
+    - Added a `SettingsScreen` to allow users to select their preferred engine.
+    - Added a settings icon to the `ChatScreen` to provide access to the `SettingsScreen`.
+    - Updated `MainActivity` to manage the engine selection state and dynamically recreate the ViewModels with the correct dependencies when the engine is changed.
 
-1.  **Create a `feature` module:** This module will contain the UI and ViewModel for a specific feature, such as the chat screen. This will help to decouple the features from each other and from the main app module.
-2.  **Update the `app` module:** The `app` module will be responsible for dependency injection, navigation, and bringing all the modules together. (Manual DI is currently implemented, but a proper DI framework is a future task).
+## Future Goals
 
-## 2. Inference Engine Abstraction
-
-The inference logic has been abstracted to support multiple inference engines (e.g., ONNX, llama.cpp).
-
-**Progress:**
-
-1.  **`InferenceEngine` interface created and modified:** This interface defines a common set of methods for all inference engines, including streaming support with `Flow`.
-2.  **`OnnxInferenceEngine` implementation created:** This class implements the `InferenceEngine` interface and contains the ONNX-specific logic.
-3.  **`ModelRepository` interface created and implemented by `Phi4ModelRepository`:** This abstracts model downloading and management.
-
-**Remaining Plan:**
-
-1.  **Create a `LlamaCppInferenceEngine` implementation (future):** This class will implement the `InferenceEngine` interface and contain the llama.cpp-specific logic.
-2.  **Update the `InferenceRepository`:** The `InferenceRepository` will be responsible for selecting the active inference engine and delegating the work to it. (This is implicitly handled by manual DI in `MainActivity` for now).
-
-## 3. Refactoring Plan (Completed Steps)
-
-*   **Created the `InferenceEngine` interface and refactored the existing ONNX logic.**
-*   **Created the `ModelRepository` interface and refactored `Phi4ModelRepository` to implement it.**
-*   **Updated `ChatViewModel` and `DownloadViewModel` to use the new interfaces.**
-*   **Updated `MainActivity` for manual dependency injection.**
-
-**Next Steps:**
-
-*   Implement a proper Dependency Injection framework (e.g., Hilt, Koin).
+*   Implement a proper Dependency Injection framework (e.g., Hilt, Koin) to replace the manual injection in `MainActivity`.
 *   Continue with modularization by creating feature modules.
-*   Implement additional inference engines (e.g., LlamaCppInferenceEngine).
+*   Explore adding more inference backends.

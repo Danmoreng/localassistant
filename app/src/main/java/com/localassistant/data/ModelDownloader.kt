@@ -122,11 +122,23 @@ class ModelDownloader(
         emit(DownloadProgress.Error(e.message ?: "Unknown error"))
     }
 
+    override suspend fun downloadFile(
+        url: String,
+        destFile: File
+    ): Flow<DownloadProgress> = flow {
+        emit(DownloadProgress.DownloadingFile(1, 1, destFile.name))
+        downloadSingleFile(url, destFile)
+        emit(DownloadProgress.Success)
+    }.catch { e ->
+        Log.e("ModelDownloader", "Error downloading file: ${e.message}")
+        emit(DownloadProgress.Error(e.message ?: "Unknown error"))
+    }
+
     /**
      * Downloads a single file from [fileUrl] into [destFile].
      */
     @Throws(IOException::class)
-    suspend fun downloadSingleFile(fileUrl: String, destFile: File) = withContext(Dispatchers.IO) {
+    private suspend fun downloadSingleFile(fileUrl: String, destFile: File) = withContext(Dispatchers.IO) {
         Log.d("ModelDownloader", "Downloading $fileUrl to ${destFile.absolutePath}")
 
         val request = Request.Builder()
@@ -146,6 +158,9 @@ class ModelDownloader(
 
             val bodyStream = response.body?.byteStream()
                 ?: throw IOException("Response body is null for $fileUrl")
+
+            // Create parent directories if they don't exist
+            destFile.parentFile?.mkdirs()
 
             destFile.outputStream().use { output ->
                 bodyStream.copyTo(output)

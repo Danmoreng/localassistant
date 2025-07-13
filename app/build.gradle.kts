@@ -38,10 +38,16 @@ android {
     buildFeatures {
         compose = true
     }
+    packagingOptions {
+        resources {
+            excludes.add("**/libc++_shared.so")
+        }
+    }
 }
 
 dependencies {
 
+    implementation(project(":llama"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)

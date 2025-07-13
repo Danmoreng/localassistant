@@ -32,4 +32,9 @@ interface RemoteModelDataSource {
         subfolder: String,
         destDir: File
     ): Flow<com.localassistant.data.DownloadProgress>
+
+    suspend fun downloadFile(
+        url: String,
+        destFile: File
+    ): Flow<com.localassistant.data.DownloadProgress>
 }

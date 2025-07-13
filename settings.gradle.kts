@@ -21,4 +21,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "LocalAssistant"
 include(":app")
-include(":core:engine")
+include(":llama")
+project(":llama").projectDir = file("llama_cpp/examples/llama.android/llama")
