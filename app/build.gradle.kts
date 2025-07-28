@@ -72,7 +72,7 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.onnxruntime.android)
     implementation(libs.okhttp.logging.interceptor)
-    implementation(files("libs/onnxruntime-genai-android-0.7.0.aar"))
+    implementation(files("libs/onnxruntime-genai-android-0.8.3.aar"))
     implementation(libs.kotlinx.serialization.json)
 
     implementation(libs.hilt.android)
