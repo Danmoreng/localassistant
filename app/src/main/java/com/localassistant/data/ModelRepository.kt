@@ -13,4 +13,6 @@ interface ModelRepository {
     suspend fun isModelAvailable(): Boolean
 
     fun getModelDirectory(): File
+
+    fun getModelPath(): String
 }

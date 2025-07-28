@@ -3,6 +3,8 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlinx.serialization)
+    alias(libs.plugins.hilt.android.plugin)
+    kotlin("kapt")
 }
 
 android {
@@ -72,4 +74,9 @@ dependencies {
     implementation(libs.okhttp.logging.interceptor)
     implementation(files("libs/onnxruntime-genai-android-0.7.0.aar"))
     implementation(libs.kotlinx.serialization.json)
+
+    implementation(libs.hilt.android)
+    kapt(libs.hilt.compiler)
+    implementation(libs.androidx.hilt.navigation.compose)
+    implementation(libs.androidx.datastore.preferences)
 }

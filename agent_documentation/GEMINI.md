@@ -28,7 +28,10 @@ This is an Android application that allows users to chat with a local Large Lang
 
 ## Code Structure
 
-*   **`MainActivity.kt`**: The main entry point of the app. It observes the `DownloadViewModel` to decide whether to show the `DownloadScreen` or the `ChatScreen`. Dependencies are now manually injected here.
+*   **`LocalAssistantApp.kt`**: The Application class, annotated with `@HiltAndroidApp` to enable Hilt dependency injection.
+*   **`MainActivity.kt`**: The main entry point of the app, annotated with `@AndroidEntryPoint`. It now uses Hilt to inject ViewModels and no longer contains manual ViewModel factories.
+*   **`di` package**:
+    *   `AppModule.kt`: A Hilt module that provides singleton instances of `ModelRepository` and `InferenceEngine`.
 *   **`data` package**:
     *   `ModelRepository.kt`: New interface for abstracting model download and management.
     *   `Phi4ModelRepository.kt`: Implementation of `ModelRepository` for Phi-4 models.
@@ -36,6 +39,7 @@ This is an Android application that allows users to chat with a local Large Lang
     *   `ModelDownloader.kt`: Handles actual model downloading.
     *   `Phi4MiniFiles.kt`: Specific file definitions for Phi-4 mini.
     *   `RemoteModelDataSource.kt`: Handles remote model data.
+    *   `SettingsRepository.kt`: Interface for managing user settings.
 *   **`engine` package**: (Moved from `core/engine`)
     *   `InferenceEngine.kt`: Modified interface for abstracting inference engines, now supporting streaming with `Flow`.
     *   `Engine.kt`: Placeholder class.
@@ -49,14 +53,14 @@ This is an Android application that allows users to chat with a local Large Lang
     *   `ChatScreen.kt`: The main chat screen UI.
     *   `DownloadScreen.kt`: The model download screen UI.
 *   **`viewmodel` package**:
-    *   `ChatViewModel.kt`: The ViewModel for the `ChatScreen`, now using `InferenceEngine` and `ModelRepository` interfaces.
-    *   `DownloadViewModel.kt`: The ViewModel for the `DownloadScreen`, now using `ModelRepository` interface.
+    *   `ChatViewModel.kt`: The ViewModel for the `ChatScreen`, now annotated with `@HiltViewModel` and receiving dependencies via constructor injection.
+    *   `DownloadViewModel.kt`: The ViewModel for the `DownloadScreen`, now annotated with `@HiltViewModel` and receiving dependencies via constructor injection.
 
 ## Key Observations
 
 *   The app uses a hardcoded URL to download the model. This might not be ideal for a production app, but it's fine for a demo.
 *   The app now uses abstracted interfaces (`InferenceEngine`, `ModelRepository`) for better modularity and to support multiple inference engines in the future.
 *   The `InferenceEngine` now supports streaming responses using Kotlin `Flow`.
-*   Dependency injection is currently handled manually in `MainActivity.kt`, which should ideally be replaced by a proper DI framework (e.g., Hilt, Koin) for larger projects.
+*   **Dependency injection is now handled by Hilt.** Manual factories in `MainActivity.kt` have been removed.
 *   The app has a clean and simple architecture that is easy to understand and extend.
-*   **Working Environment:** This agent is aware that it is operating in a PowerShell 7 environment on Windows.
+*   **Working Environment:** This agent is aware that it is operating in a PowerShell 7 environment on Windows. The user runs builds and tests from within Android Studio.
