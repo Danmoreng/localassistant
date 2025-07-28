@@ -4,15 +4,7 @@ This document lists known bugs and issues within the LocalAssistant application 
 
 ---
 
-## 1. ONNX Inference Context Loss
 
-**Description:** When using the ONNX inference engine, the conversation context is not maintained after the first turn. The initial response to a user query is correct and relevant. However, subsequent responses lose all previous context and appear to be random or unrelated to the ongoing conversation.
-
-**Impact:** The ONNX inference engine is currently unusable for multi-turn conversations.
-
-**Suspected Area:** This likely points to an issue in how the chat history or conversation context is being prepared and passed to the ONNX model, or how the model itself is handling the input sequence for subsequent turns. Relevant files to investigate include `ChatViewModel.kt` (how it manages and passes chat history) and `OnnxInferenceEngine.kt` (how it processes the input for inference).
-
----
 
 ## 2. Llama.cpp Limited Token Generation
 

@@ -129,7 +129,7 @@ class OnnxInferenceEngine(
         if (systemPrompt.isNotBlank()) {
             sb.append(systemToken).append("\n")
             sb.append(systemPrompt)
-            sb.append(endToken).append("\n")
+            sb.append(endToken)
         }
 
         // The conversation list is stored with the newest message at index 0. Reverse it to start with the oldest.
@@ -140,12 +140,12 @@ class OnnxInferenceEngine(
                         MessageType.USER -> {
                             sb.append(userToken).append("\n")
                             sb.append(message.text)
-                            sb.append(endToken).append("\n")
+                            sb.append(endToken)
                         }
                         MessageType.ASSISTANT -> {
                             sb.append(assistantToken).append("\n")
                             sb.append(message.text)
-                            sb.append(endToken).append("\n")
+                            sb.append(endToken)
                         }
                         MessageType.SYSTEM -> {
                             // System messages within the conversation are handled by the initial systemPrompt
@@ -153,7 +153,7 @@ class OnnxInferenceEngine(
                             // For now, we'll just append it as a regular system message.
                             sb.append(systemToken).append("\n")
                             sb.append(message.text)
-                            sb.append(endToken).append("\n")
+                            sb.append(endToken)
                         }
                     }
                 }
