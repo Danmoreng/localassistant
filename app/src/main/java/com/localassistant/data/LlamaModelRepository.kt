@@ -40,7 +40,7 @@ class LlamaModelRepository(
         return modelDir
     }
 
-    fun getModelPath(): String {
+    override fun getModelPath(): String {
         return File(modelDir, modelName).absolutePath
     }
 }

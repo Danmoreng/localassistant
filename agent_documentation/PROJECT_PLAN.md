@@ -33,7 +33,7 @@ Deliver a **stable, good‑looking on‑device LLM chat app** as quickly as poss
 
 ## 4 · Milestones & Tasks
 
-### Milestone A · "Foundation Stability" (week 1‑2)
+### Milestone A · "Foundation Stability" (week 1‑2) - ✅ **DONE**
 
 |  #   | Task                                                                                 | DoD                                                                        |
 | ---- | ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------- |

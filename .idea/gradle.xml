@@ -11,8 +11,7 @@
           <set>
             <option value="$PROJECT_DIR$" />
             <option value="$PROJECT_DIR$/app" />
-            <option value="$PROJECT_DIR$/core" />
-            <option value="$PROJECT_DIR$/core/engine" />
+            <option value="$PROJECT_DIR$/llama_cpp/examples/llama.android/llama" />
           </set>
         </option>
       </GradleProjectSettings>

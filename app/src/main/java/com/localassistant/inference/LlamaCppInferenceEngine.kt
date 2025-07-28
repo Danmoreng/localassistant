@@ -35,6 +35,10 @@ class LlamaCppInferenceEngine(
         Log.d("LlamaCppInferenceEngine", "LlamaCppInferenceEngine initialized with model path: $modelPath")
     }
 
+    override suspend fun load() {
+        LLamaAndroid.instance().load(modelPath)
+    }
+
     override fun generateResponse(prompt: String): Flow<String> {
         Log.d("LlamaCppInferenceEngine", "Formatted Prompt: $prompt")
         // LLamaAndroid's send function expects the prompt to be already formatted
@@ -95,5 +99,9 @@ class LlamaCppInferenceEngine(
         }
 
         return sb.toString()
+    }
+
+    override suspend fun close() {
+        LLamaAndroid.instance().unload()
     }
 }

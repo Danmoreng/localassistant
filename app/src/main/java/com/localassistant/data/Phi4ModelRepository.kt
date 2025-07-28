@@ -64,4 +64,8 @@ class Phi4ModelRepository(
 }
 
     override fun getModelDirectory(): File = modelDir
+
+    override fun getModelPath(): String {
+        return modelDir.absolutePath
+    }
 }

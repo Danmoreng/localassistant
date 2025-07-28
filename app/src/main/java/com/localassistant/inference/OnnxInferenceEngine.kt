@@ -82,6 +82,10 @@ class OnnxInferenceEngine(
         }
     }
 
+    override suspend fun load() {
+        // ONNX model is loaded in the init block, so this is empty
+    }
+
     override fun generateResponse(prompt: String): Flow<String> = callbackFlow {
         try {
             // Encode the prompt to tokens.
@@ -167,5 +171,9 @@ class OnnxInferenceEngine(
         }
 
         return sb.toString()
+    }
+
+    override suspend fun close() {
+        // No-op
     }
 }
