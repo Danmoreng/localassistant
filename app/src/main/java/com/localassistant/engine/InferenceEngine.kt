@@ -5,7 +5,7 @@ import kotlinx.coroutines.flow.Flow
 
 interface InferenceEngine {
     suspend fun load()
-    fun generateResponse(prompt: String): Flow<String>
+    suspend fun generateResponse(prompt: String): Flow<String>
     fun formatChat(messages: List<Message>, systemPrompt: String): String
     suspend fun close()
 }

@@ -86,7 +86,7 @@ class OnnxInferenceEngine(
         // ONNX model is loaded in the init block, so this is empty
     }
 
-    override fun generateResponse(prompt: String): Flow<String> = callbackFlow {
+    override suspend fun generateResponse(prompt: String): Flow<String> = callbackFlow {
         try {
             // Encode the prompt to tokens.
             Log.d("OnnxInferenceEngine", "Formatted Prompt: $prompt")

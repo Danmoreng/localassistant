@@ -27,11 +27,10 @@ import javax.inject.Inject
 @HiltViewModel
 class ChatViewModel @Inject constructor(
     private val app: Application,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val inferenceEngine: InferenceEngine,
+    private val llamaModelRepository: LlamaModelRepository
 ) : ViewModel() {
-
-    private lateinit var repository: ModelRepository
-    private lateinit var inferenceEngine: InferenceEngine
 
     private val _messages = mutableStateListOf<Message>()
     val messages: List<Message> get() = _messages
@@ -49,11 +48,8 @@ class ChatViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            settingsRepository.selectedEngine.collect { engine ->
-                initializeEngine(engine)
-                inferenceEngine.load()
-                _isModelAvailable.value = repository.isModelAvailable()
-            }
+            inferenceEngine.load()
+            _isModelAvailable.value = true
         }
         _messages.add(
             TextMessage(
@@ -61,22 +57,6 @@ class ChatViewModel @Inject constructor(
                 type = MessageType.ASSISTANT
             )
         )
-    }
-
-    private suspend fun initializeEngine(engine: String) {
-        if (::inferenceEngine.isInitialized) {
-            inferenceEngine.close()
-        }
-        when (engine) {
-            "phi" -> {
-                repository = Phi4ModelRepository(app, ModelDownloader())
-                inferenceEngine = OnnxInferenceEngine(app, repository.getModelDirectory().absolutePath)
-            }
-            "llama" -> {
-                repository = LlamaModelRepository(app, ModelDownloader())
-                inferenceEngine = LlamaCppInferenceEngine(app, repository.getModelPath())
-            }
-        }
     }
 
     fun sendMessage(message: Message) {
