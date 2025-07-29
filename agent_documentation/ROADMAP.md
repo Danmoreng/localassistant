@@ -1,6 +1,78 @@
 # LocalAssistant Roadmap
 
-> **Last updated:** 28 Jul 2025
+> **Last updated:** 29 Jul 2025
+
+This document outlines the strategic development plan for LocalAssistant, organized by release milestones and feature categories.
+
+---
+
+## 🎯 Current Release: v0.2.0 - Core Stability
+
+**Theme:** Reliable foundation with persistent data and improved UX
+
+### Critical Path Items
+- [x] **S-4: Custom JNI Binding** - Replace limited llama.cpp wrapper to unlock full token generation
+- [ ] **B-1: Settings Persistence** - DataStore integration for user preferences 
+- [ ] **C-1: Context Management** - Prevent crashes on long conversations
+- [ ] **D-1: Chat History Storage** - Room database for conversation persistence
+
+### Quality of Life Improvements  
+- [ ] **E-1: UI Polish** - Material 3 compliance and visual consistency
+- [ ] **Error Handling** - Graceful failure states and user feedback
+
+**Success Metrics:**
+- Zero crashes on 8+ hour conversations
+- < 3 second app startup time with chat history
+- 100% settings persistence across app restarts
+- Dark/light theme switching without UI glitches
+
+---
+
+## 🚀 Next Release: v0.3.0 - Enhanced User Experience
+
+**Theme:** Advanced features and model management
+
+### Model Management
+- [ ] **Model Browser** - Visual interface for available models with metadata
+- [ ] **Background Downloads** - Progress notifications and pause/resume capability  
+- [ ] **Storage Management** - Model deletion, space usage, and cleanup tools
+- [ ] **Model Switching** - Runtime model swapping without app restart
+
+### Advanced Chat Features
+- [ ] **Conversation Management** - Create, rename, delete, and organize chats
+- [ ] **Export/Import** - Share conversations or backup chat history
+- [ ] **Message Search** - Full-text search across conversation history
+- [ ] **Response Regeneration** - Re-roll assistant responses with different parameters
+
+### Performance & Reliability
+- [ ] **Memory Optimization** - Efficient model loading and context management
+- [ ] **Background Processing** - Continue inference when app is backgrounded
+- [ ] **Offline Indicators** - Clear status when models are unavailable
+- [ ] **Recovery Mechanisms** - Auto-restart failed inference sessions
+
+**Success Metrics:**
+- Support for 3+ concurrent model types (ONNX, GGUF, etc.)
+- Background downloads complete 95% of the time
+- < 1GB RAM usage during active inference
+- Sub-second response time for conversation switching
+
+---
+
+## 🔮 Future Releases: v0.4.0+ - Advanced Capabilities
+
+### Multi-Modal Support (v0.4.0)
+- [ ] **Image Understanding** - Vision model integration for image analysis
+- [ ] **Voice Input/Output** - Speech-to-text and text-to-speech capabilities
+- [ ] **Document Processing** - PDF and text file ingestion and analysis
+- [ ] **Code Understanding** - Syntax highlighting and code completion features
+
+### Hardware Acceleration (v0.5.0)
+- [ ] **GPU Acceleration** - OpenCL/Vulkan compute backend exploration
+- [ ] **NPU Integration** - Neural processing unit support for compatible devices
+- [ ] **Quantization Options** - Int4, Int8, FP16 model variants
+- [ ] **Batch Processing** - Efficient handling of multiple concurrent requests
+
+---
 
 This document outlines the development plan for the LocalAssistant app. It serves as a high-level guide for current priorities and future ambitions.
 

@@ -1,15 +1,21 @@
 # Known Issues
 
-This document lists known bugs and issues within the LocalAssistant application that are pending investigation and resolution.
+This document tracks confirmed bugs and limitations within the LocalAssistant application.
 
 ---
 
+## Critical Issues
 
+### Llama.cpp Inference Token Limit
 
-## 2. Llama.cpp Limited Token Generation
+**Description:**
+The llama.cpp inference implementation has a hardcoded `n_len` value, which artificially limits the number of tokens the model can generate in a single response. 
 
-**Description:** The `llama.cpp` inference engine appears to have a severely limited token generation output, often cutting off responses prematurely. This suggests an artificial limit on the number of tokens generated per inference call.
+**Impact:**
+This causes responses from the Llama 3B model to be cut off prematurely, making it impossible to have extended conversations or generate long-form text.
 
-**Impact:** The `llama.cpp` engine provides incomplete and truncated responses, significantly hindering its usability for meaningful conversations.
+**Workaround:**
+Use the ONNX/Phi-4 engine for conversations requiring longer responses.
 
-**Suspected Area:** This issue is likely due to a hardcoded limit within the `llama.cpp` Android binding code (specifically within the `llama_cpp` submodule). To resolve this, it may be necessary to re-implement or modify the Android bindings outside of the submodule to allow for custom configuration of the maximum token generation limit, without directly altering the submodule's source code.
+**Resolution Plan:**
+The hardcoded `n_len` value needs to be replaced with a configurable parameter that can be adjusted by the user or set to a more sensible default.
