@@ -1,46 +1,32 @@
 package com.localassistant.data
 
 import android.content.Context
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.flow
 import java.io.File
 
-class LlamaModelRepository(
-    private val context: Context,
-    private val remoteDataSource: RemoteModelDataSource
-) : ModelRepository {
-    private val modelDir by lazy {
-        File(context.cacheDir, "models/llama")
+class LlamaModelRepository(private val context: Context, private val downloader: ModelDownloader) : ModelRepository {
+    override suspend fun isModelAvailable(): Boolean {
+        return getModelPath().isNotEmpty() && File(getModelPath()).exists()
     }
 
-    // Using a single file GGUF model for now
-    private val modelName = "gemma-3n-E2B-it-Q4_0.gguf"
-    private val modelUrl = "https://huggingface.co/unsloth/gemma-3n-E2B-it-GGUF/resolve/main/gemma-3n-E2B-it-Q4_0.gguf"
+    override fun getModelPath(): String {
+        val file = File(context.filesDir, "phi-2.Q4_K_M.gguf")
+        return file.absolutePath
+    }
+
+    override fun getModelDirectory(): File {
+        return context.filesDir
+    }
 
     override suspend fun downloadAllInSubfolderFlow(
         repoId: String,
         branch: String,
         subfolder: String
-    ): Flow<DownloadProgress> {
-        // This implementation downloads a single file, not a subfolder.
-        // The parameters are kept for interface compatibility.
-        val modelFile = File(modelDir, modelName)
-        return remoteDataSource.downloadFile(modelUrl, modelFile)
-    }
-
-    override suspend fun isModelAvailable(): Boolean {
-        return withContext(Dispatchers.IO) {
-            val modelFile = File(modelDir, modelName)
-            modelFile.exists() && modelFile.length() > 0
+    ): Flow<DownloadProgress> = flow {
+        val url = "https://huggingface.co/TheBloke/phi-2-GGUF/resolve/main/phi-2.Q4_K_M.gguf"
+        downloader.downloadFile(url, File(getModelPath())).collect { progress ->
+            emit(progress)
         }
-    }
-
-    override fun getModelDirectory(): File {
-        return modelDir
-    }
-
-    override fun getModelPath(): String {
-        return File(modelDir, modelName).absolutePath
     }
 }

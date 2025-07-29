@@ -21,5 +21,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "LocalAssistant"
 include(":app")
-include(":llama")
-project(":llama").projectDir = file("llama_cpp/examples/llama.android/llama")
+include(":llama-binding")
