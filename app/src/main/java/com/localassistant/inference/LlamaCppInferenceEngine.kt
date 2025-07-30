@@ -6,22 +6,27 @@ import com.localassistant.engine.InferenceEngine
 import com.localassistant.model.Message
 import com.localassistant.model.TextMessage
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 
 class LlamaCppInferenceEngine(
     private val modelPath: String
 ) : InferenceEngine {
+
+    private var llama: Llama? = null
 
     init {
         Log.d("LlamaCppInferenceEngine", "LlamaCppInferenceEngine initialized with model path: $modelPath")
     }
 
     override suspend fun load() {
-        // The new JNI bridge loads the model on each generation, so this is a no-op.
+        llama = Llama(modelPath)
     }
 
     override suspend fun generateResponse(prompt: String): Flow<String> {
         Log.d("LlamaCppInferenceEngine", "Formatted Prompt: $prompt")
-        return Llama.generate(prompt, modelPath, 256)
+        return llama?.generate(prompt, 256) ?: flow {
+            emit("Error: Llama not initialized")
+        }
     }
 
     override fun formatChat(messages: List<Message>, systemPrompt: String): String {
@@ -39,6 +44,7 @@ class LlamaCppInferenceEngine(
     }
 
     override suspend fun close() {
-        // The new JNI bridge releases resources after each generation, so this is a no-op.
+        llama?.release()
+        llama = null
     }
 }
