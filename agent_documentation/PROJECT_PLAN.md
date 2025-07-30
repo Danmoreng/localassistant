@@ -117,3 +117,118 @@ Eliminate the 64-token limitation and unlock full llama.cpp capabilities by **dr
 * Upstream discussion on `nlen` issue: ggerganov/llama.cpp #6108  
 * Internal design doc: `agent_documentation/deep_dives/LLAMA_CPP.md` (section “Build & Integration Process”)  
 * Android NDK r27 – CMake toolchain defaults.
+
+Below is a structured “ before / after ” comparison, followed by the concrete reasons your **new commit** fails to emit tokens and why the **engine‑switching UX** no longer works, plus step‑by‑step fixes.
+
+---
+
+## 1 .  Architecture level changes
+
+| Area                  | Old (commit **working**)                                                                                                               | New (commit **broken**)                                                                                                                                                                         |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **llama.cpp wrapper** | Re‑used the upstream sample module `examples/llama.android` exposed through the Kotlin facade `LLamaAndroid` (hard‑coded `nlen = 64`)  | Replaced by your own `:llama-binding` Android‑library module that builds `llamacpp_jni` via CMake and exposes a new Kotlin class `Llama`                                                        |
+| **Gradle setup**      | `settings.gradle.kts` includes `:llama` and points at the sample project                                                               | `:llama` removed; new `:llama-binding` added and `app` declares `implementation(project(":llama-binding"))`                                                                                     |
+| **Inference engine**  | `LlamaCppInferenceEngine` delegates to **LLamaAndroid** and offers<br>`fun generateResponse(prompt): Flow<String>` (non‑suspending)    | Re‑implemented to wrap the new **Llama** facade and changed the API to<br>`suspend fun generateResponse(…)`                                                                                     |
+| **DI / ViewModel**    | `ChatViewModel` *listens* to `SettingsRepository.selectedEngine` and builds either ONNX or llama.cpp engines at runtime                | Hilt now injects a *single* `InferenceEngine` that `InferenceModule` always wires to `LlamaCppInferenceEngine` ; the new `ChatViewModel` therefore never looks at `SettingsRepository` anymore  |
+
+---
+
+## 2 .  Why **no tokens are emitted**
+
+### 2·1 Native bug — `tokenToPiece`
+
+In `llamacpp_bridge.cpp` you call `llama_token_to_piece` with a zero‑length buffer to obtain the required size, but you treat **non‑negative** return values as an error:
+
+```cpp
+int n = llama_token_to_piece(vocab, token, nullptr, 0, false, false);
+if (n >= 0) {              // <-- wrong: n is the required size!
+    return env->NewByteArray(0);
+}
+int required_size = -n;    // <-- becomes negative
+```
+
+Because the early‑return path always triggers, every sampled token is converted to an **empty byte‑array**, so `Llama.generate()` only emits empty strings to the UI .
+
+> **Fix**
+
+```cpp
+int n = llama_token_to_piece(vocab, token, nullptr, 0, false, false);
+if (n <= 0) {
+    return env->NewByteArray(0); // error
+}
+
+std::vector<char> out(n);
+int written = llama_token_to_piece(vocab, token, out.data(), n, false, false);
+if (written <= 0) {
+    return env->NewByteArray(0);
+}
+
+jbyteArray result = env->NewByteArray(written);
+env->SetByteArrayRegion(result, 0, written, reinterpret_cast<jbyte*>(out.data()));
+return result;
+```
+
+This alone lets the Kotlin layer receive real UTF‑8 slices.
+
+### 2·2 Kotlin side — decoding & flow
+
+`Llama.generate()` already converts the returned `ByteArray` to a `String` and emits it via `Flow` . Once the native bug is fixed, the UI will start seeing text without further changes.
+
+---
+
+## 3 .  Why engine switching broke
+
+1. **InferenceModule is hard‑wired to llama.cpp** – it always returns `LlamaCppInferenceEngine`, ignoring the stored preference .
+2. **ChatViewModel no longer watches `SettingsRepository`** and simply uses the injected engine , whereas the old version rebuilt the engine whenever the preference changed .
+3. **DownloadViewModel still uses the preference**, so the two ViewModels are now out of sync: the download screen may fetch an ONNX model, but the chat screen keeps using llama.cpp.
+
+> **Fix (minimal)**
+>
+> ```kotlin
+> @Module
+> @InstallIn(SingletonComponent::class)
+> object InferenceModule {
+>     @Provides
+>     fun provideInferenceEngine(
+>         @ApplicationContext ctx: Context,
+>         settings: SettingsRepository
+>     ): InferenceEngine = runBlocking {
+>         when (settings.selectedEngine.first()) {
+>             "phi"   -> OnnxInferenceEngine(ctx, Phi4ModelRepository(ctx, ModelDownloader()).getModelDirectory().absolutePath)
+>             "llama" -> LlamaCppInferenceEngine(LlamaModelRepository(ctx, ModelDownloader()).getModelPath())
+>             else    -> LlamaCppInferenceEngine("error‑path")
+>         }
+>     }
+> }
+> ```
+>
+> *or* revert to the former pattern where `ChatViewModel` builds the engine itself and listens to the flow.
+
+---
+
+## 4 .  Token‑limit elimination
+
+The new pipeline can now stream up to `maxTokens` (default **256**) passed from `LlamaCppInferenceEngine.generateResponse()` .  After the `tokenToPiece` fix you will have removed the 64‑token ceiling of the sample wrapper.
+
+---
+
+## 5 .  Recommended clean‑up checklist
+
+| Area              | Action                                                                                                                          |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| **JNI**           | ✓ Fix `tokenToPiece` return‑code logic<br>✓ Guard against invalid UTF‑8 (similar to the sample’s `is_valid_utf8`)               |
+| **Kotlin API**    | ✓ Change `generateResponse` back to `fun` (non‑suspending) or update *all* call‑sites to use a suspending function consistently |
+| **DI / Settings** | ✓ Either provide an `EngineFactory` that selects at runtime, or restore the old ViewModel logic                                 |
+| **Testing**       | ✓ Add an instrumentation test that asks for ≥300 tokens and asserts the length to prevent regressions (already on your roadmap) |
+| **Build**         | ✓ Add R8 keep rules for the new native class names (`-keep class com.example.localassistant.llamacpp.** { *; }`)                |
+| **Docs**          | ✓ Update README / deep‑dive docs to mention the new module and removal of the sample wrapper                                    |
+
+---
+
+### Bottom line
+
+* **No output** stems from one wrong comparison operator in `tokenToPiece`.
+* **Engine switching** stopped working because the DI graph now binds a single llama.cpp engine and `ChatViewModel` no longer reacts to the preference.
+
+Correcting those two areas should restore functionality **and** give you the desired >64‑token capability.
+
