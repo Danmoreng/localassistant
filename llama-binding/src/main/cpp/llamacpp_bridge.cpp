@@ -1,18 +1,22 @@
 #include <jni.h>
+#include <cstdlib>
 #include <string>
 #include <vector>
 #include <android/log.h>
 #include <thread>
+#include <mutex>
 #include "llama.h"
-#include "common.h"
 
 #define TAG "LlamaJni"
 
-// Global state
-static llama_model *g_model = nullptr;
-static llama_context *g_ctx = nullptr;
-static llama_sampler *g_sampler = nullptr;
-static int32_t g_n_past = 0;
+struct llama_context_wrapper {
+    llama_model *model = nullptr;
+    llama_context *ctx = nullptr;
+    llama_sampler *sampler = nullptr;
+    int32_t n_past = 0;
+};
+
+static std::once_flag g_init_flag;
 
 // Log callback
 void llama_log_callback(ggml_log_level level, const char * text, void * user_data) {
@@ -25,142 +29,176 @@ void llama_log_callback(ggml_log_level level, const char * text, void * user_dat
     }
 }
 
-// JNI init
-extern "C" JNIEXPORT void JNICALL
-Java_com_example_localassistant_llamacpp_Llama_init(JNIEnv *env, jobject thiz) {
+void init_llama() {
     llama_log_set(llama_log_callback, nullptr);
     llama_backend_init();
 }
 
 // Create context
 extern "C" JNIEXPORT jlong JNICALL
-Java_com_example_localassistant_llamacpp_Llama_newContext(JNIEnv *env, jobject thiz, jstring model_path) {
-    // Clean up previous instances
-    if (g_sampler) { llama_sampler_free(g_sampler); g_sampler = nullptr; }
-    if (g_ctx) { llama_free(g_ctx); g_ctx = nullptr; }
-    if (g_model) { llama_model_free(g_model); g_model = nullptr; }
+Java_com_example_localassistant_llamacpp_Llama_newContext(JNIEnv *env, jobject, jstring model_path) {
+    std::call_once(g_init_flag, init_llama);
+    auto wrapper = new llama_context_wrapper;
 
     const char *path = env->GetStringUTFChars(model_path, 0);
-    llama_model_params model_params = llama_model_default_params();
-    g_model = llama_model_load_from_file(path, model_params);
+
+    llama_model_params mparams = llama_model_default_params();
+    wrapper->model = llama_model_load_from_file(path, mparams);
     env->ReleaseStringUTFChars(model_path, path);
 
-    if (!g_model) {
+    if (!wrapper->model) {
         __android_log_print(ANDROID_LOG_ERROR, TAG, "Failed to load model");
+        delete wrapper;
         return 0;
     }
 
-    llama_context_params ctx_params = llama_context_default_params();
-    ctx_params.n_ctx = 2048;
-    ctx_params.n_threads = std::max(1u, std::thread::hardware_concurrency() - 2);
-    ctx_params.n_threads_batch = ctx_params.n_threads;
-    g_ctx = llama_init_from_model(g_model, ctx_params);
+    llama_context_params cparams = llama_context_default_params();
+    cparams.n_ctx           = 2048;
+    cparams.n_threads       = std::max(1u, std::thread::hardware_concurrency() - 2);
+    cparams.n_threads_batch = cparams.n_threads;
+    wrapper->ctx = llama_init_from_model(wrapper->model, cparams);
 
-    if (!g_ctx) {
+    if (!wrapper->ctx) {
         __android_log_print(ANDROID_LOG_ERROR, TAG, "Failed to create context");
-        llama_model_free(g_model);
-        g_model = nullptr;
+        llama_model_free(wrapper->model);
+        delete wrapper;
         return 0;
     }
-    
-    // Create a simple greedy sampler
-    g_sampler = llama_sampler_init_greedy();
 
-    g_n_past = 0;
-    return reinterpret_cast<jlong>(g_ctx);
+    llama_sampler_chain_params sparams = llama_sampler_chain_default_params();
+    sparams.no_perf = true;
+    wrapper->sampler = llama_sampler_chain_init(sparams);
+    llama_sampler_chain_add(wrapper->sampler, llama_sampler_init_greedy());
+
+    return reinterpret_cast<jlong>(wrapper);
 }
 
 // Free context
 extern "C" JNIEXPORT void JNICALL
-Java_com_example_localassistant_llamacpp_Llama_freeContext(JNIEnv *env, jobject thiz, jlong context_ptr) {
-    if (g_sampler) { llama_sampler_free(g_sampler); g_sampler = nullptr; }
-    if (g_ctx) { llama_free(g_ctx); g_ctx = nullptr; }
-    if (g_model) { llama_model_free(g_model); g_model = nullptr; }
-    llama_backend_free();
+Java_com_example_localassistant_llamacpp_Llama_freeContext(JNIEnv *, jobject, jlong context_ptr) {
+    auto wrapper = reinterpret_cast<llama_context_wrapper *>(context_ptr);
+    if (wrapper->sampler) { llama_sampler_free(wrapper->sampler); }
+    if (wrapper->ctx) { llama_free(wrapper->ctx); }
+    if (wrapper->model) { llama_model_free(wrapper->model); }
+    delete wrapper;
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_example_localassistant_llamacpp_Llama_clearContext(JNIEnv *env, jobject, jlong context_ptr) {
+    auto wrapper = reinterpret_cast<llama_context_wrapper *>(context_ptr);
+    if (wrapper && wrapper->ctx) {
+        llama_kv_self_clear(wrapper->ctx);
+        wrapper->n_past = 0;
+    }
 }
 
 // Tokenize
 extern "C" JNIEXPORT jintArray JNICALL
-Java_com_example_localassistant_llamacpp_Llama_tokenize(JNIEnv *env, jobject thiz, jstring text, jboolean add_bos) {
-    if (!g_model) return env->NewIntArray(0);
-    auto vocab = llama_model_get_vocab(g_model);
+Java_com_example_localassistant_llamacpp_Llama_tokenize(JNIEnv *env, jobject, jlong ctx_ptr,
+                                                        jstring text, jboolean add_bos) {
+    auto wrapper = reinterpret_cast<llama_context_wrapper *>(ctx_ptr);
+    auto ctx = wrapper->ctx;
+    const char *chars = env->GetStringUTFChars(text, 0);
+    const int  len    = strlen(chars);
+    auto model = llama_get_model(ctx);
+    auto vocab = llama_model_get_vocab(model);
 
-    const char *text_chars = env->GetStringUTFChars(text, 0);
-    int n_text = strlen(text_chars);
-    
-    std::vector<llama_token> tokens(n_text + (add_bos ? 1 : 0));
-    int n_tokens = llama_tokenize(vocab, text_chars, n_text, tokens.data(), tokens.size(), add_bos, false);
-    
-    env->ReleaseStringUTFChars(text, text_chars);
+    std::vector<llama_token> tmp(len + 4);
+    int n = llama_tokenize(vocab,
+                           chars,
+                           len,
+                           tmp.data(),
+                           tmp.size(),
+                           add_bos == JNI_TRUE,
+                           false);
 
-    if (n_tokens < 0) {
+    env->ReleaseStringUTFChars(text, chars);
+    if (n < 0) {
         __android_log_print(ANDROID_LOG_ERROR, TAG, "Tokenization failed.");
         return env->NewIntArray(0);
     }
 
-    jintArray result = env->NewIntArray(n_tokens);
-    env->SetIntArrayRegion(result, 0, n_tokens, tokens.data());
+    jintArray result = env->NewIntArray(n);
+    env->SetIntArrayRegion(result, 0, n, reinterpret_cast<jint*>(tmp.data()));
     return result;
 }
 
 // Evaluate
 extern "C" JNIEXPORT jint JNICALL
-Java_com_example_localassistant_llamacpp_Llama_evalTokens(JNIEnv *env, jobject thiz, jlong context_ptr, jintArray token_ids) {
-    if (!g_ctx) return -1;
-    auto context = reinterpret_cast<llama_context *>(context_ptr);
+Java_com_example_localassistant_llamacpp_Llama_evalTokens(
+        JNIEnv *env, jobject, jlong ctx_ptr, jintArray token_ids) {
+    auto wrapper = reinterpret_cast<llama_context_wrapper *>(ctx_ptr);
+    auto ctx = wrapper->ctx;
+    if (!ctx) return -1;
 
-    jint *tokens = env->GetIntArrayElements(token_ids, nullptr);
-    int n_tokens = env->GetArrayLength(token_ids);
+    const int n = env->GetArrayLength(token_ids);
+    std::vector<llama_token> tok(n);
+    env->GetIntArrayRegion(token_ids, 0, n, reinterpret_cast<jint*>(tok.data()));
 
-    llama_batch batch = llama_batch_init(n_tokens, 0, 1);
-    for (int i = 0; i < n_tokens; ++i) {
-        batch.token[i]    = tokens[i];
-        batch.pos[i]      = g_n_past + i;
-        batch.n_seq_id[i] = 1;
+    llama_batch batch = llama_batch_init(n, 0, 1);
+
+    for (int i = 0; i < n; ++i) {
+        batch.token[i]     = tok[i];
+        batch.pos[i]       = wrapper->n_past + i;
+        batch.n_seq_id[i]  = 1;
         batch.seq_id[i][0] = 0;
-        batch.logits[i]   = false;
+        batch.logits[i]    = false;
     }
-    batch.logits[batch.n_tokens - 1] = true;
+    batch.n_tokens  = n;
+    batch.logits[n-1] = true;
 
-    if (llama_decode(context, batch) != 0) {
-        __android_log_print(ANDROID_LOG_ERROR, TAG, "llama_decode failed");
-        llama_batch_free(batch);
-        return -1;
-    }
-    
-    g_n_past += n_tokens;
+    int rc = llama_decode(ctx, batch);
+
+    wrapper->n_past += n;
     llama_batch_free(batch);
-    env->ReleaseIntArrayElements(token_ids, tokens, JNI_ABORT);
-    return 0;
+    return rc;
 }
 
 // Sample
 extern "C" JNIEXPORT jint JNICALL
-Java_com_example_localassistant_llamacpp_Llama_sample(JNIEnv *env, jobject thiz, jlong context_ptr) {
-    if (!g_ctx || !g_sampler) return -1;
-    return llama_sampler_sample(g_sampler, g_ctx, -1);
+Java_com_example_localassistant_llamacpp_Llama_sample(JNIEnv *, jobject, jlong ctx_ptr) {
+    auto wrapper = reinterpret_cast<llama_context_wrapper *>(ctx_ptr);
+    if (!wrapper->ctx || !wrapper->sampler) return -1;
+    const int32_t id = llama_sampler_sample(wrapper->sampler, wrapper->ctx, -1);
+    return id < 0 ? -1 : id;
 }
 
-// Token to Piece
-extern "C" JNIEXPORT jstring JNICALL
-Java_com_example_localassistant_llamacpp_Llama_tokenToPiece(JNIEnv *env, jobject thiz, jlong context_ptr, jint token_id) {
-    if (!g_model) return env->NewStringUTF("");
-    auto vocab = llama_model_get_vocab(g_model);
-
-    std::vector<char> result(8, 0);
-    const int n_chars = llama_token_to_piece(vocab, token_id, result.data(), result.size(), 0, false);
-    if (n_chars < 0) {
-        result.resize(-n_chars);
-        llama_token_to_piece(vocab, token_id, result.data(), result.size(), 0, false);
-    } else {
-        result.resize(n_chars);
+extern "C" JNIEXPORT jbyteArray JNICALL
+Java_com_example_localassistant_llamacpp_Llama_tokenToPiece(JNIEnv *env, jobject,
+                                                            jlong ctx_ptr, jint token) {
+    auto wrapper = reinterpret_cast<llama_context_wrapper *>(ctx_ptr);
+    auto ctx   = wrapper->ctx;
+    if (!ctx) {
+        return env->NewByteArray(0);
     }
-    return env->NewStringUTF(std::string(result.begin(), result.end()).c_str());
+
+    auto model = llama_get_model(ctx);
+    auto vocab = llama_model_get_vocab(model);
+
+    int n = llama_token_to_piece(vocab, token, nullptr, 0, false, false);
+    if (n >= 0) {
+        return env->NewByteArray(0);
+    }
+
+    int required_size = -n;
+    std::vector<char> out(required_size);
+
+    int written_size = llama_token_to_piece(vocab, token, out.data(), required_size, false, false);
+    if (written_size < 0) {
+        return env->NewByteArray(0);
+    }
+
+    jbyteArray result = env->NewByteArray(written_size);
+    env->SetByteArrayRegion(result, 0, written_size, reinterpret_cast<jbyte*>(out.data()));
+    return result;
 }
 
 // Token EOS
 extern "C" JNIEXPORT jint JNICALL
-Java_com_example_localassistant_llamacpp_Llama_tokenEOS(JNIEnv *env, jobject thiz) {
-    if (!g_model) return -1;
-    return llama_vocab_eos(llama_model_get_vocab(g_model));
+Java_com_example_localassistant_llamacpp_Llama_tokenEOS(JNIEnv *, jobject, jlong ctx_ptr) {
+    auto wrapper = reinterpret_cast<llama_context_wrapper *>(ctx_ptr);
+    if (!wrapper->ctx) return -1;
+    auto model = llama_get_model(wrapper->ctx);
+    auto vocab = llama_model_get_vocab(model);
+    return llama_vocab_eos(vocab);
 }
